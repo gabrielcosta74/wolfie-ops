@@ -1,0 +1,235 @@
+.analytics-container {
+  padding: 48px;
+  max-width: 100%;
+  margin: 0 auto;
+  font-family: var(--font-inter), sans-serif;
+  color: var(--text);
+  /* Optional subtle background glow for the whole page */
+  position: relative;
+}
+
+.analytics-container::before {
+  content: "";
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80vw;
+  height: 400px;
+  background: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.15), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.analytics-header {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 48px;
+}
+
+.analytics-title {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.analytics-subtitle {
+  font-size: 1.1rem;
+  color: var(--muted);
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.05), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+}
+
+.glass-card:hover::before {
+  left: 200%;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* KPI Grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+.kpi-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-soft);
+  margin-bottom: 12px;
+  display: block;
+}
+
+.kpi-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.kpi-delta-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.kpi-delta {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.kpi-delta.positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399; /* emerald-400 */
+}
+
+.kpi-delta.negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171; /* red-400 */
+}
+
+/* Charts Layout */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+@media (max-width: 1024px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.chart-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+/* Glass Table */
+.glass-table-wrapper {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.glass-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.glass-table th,
+.glass-table td {
+  padding: 16px 20px;
+  text-align: left;
+}
+
+.glass-table th {
+  color: var(--muted-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-table tbody tr {
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.2s ease;
+}
+
+.glass-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: scale(1.01);
+}
+
+.glass-table tbody td {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.glass-table tbody td:first-child {
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.glass-table tbody td:last-child {
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.bold-cell {
+  font-weight: 600;
+  color: #fff;
+}
+
+.badge-date {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.empty-state-glass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+}

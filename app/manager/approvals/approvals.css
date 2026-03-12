@@ -1,0 +1,209 @@
+/* ================================================================
+   Admin Approvals — /manager/approvals
+   Inherits globals.css dark-mode tokens, adds tab UI and action styles
+   ================================================================ */
+
+/* --- Tabs ----------------------------------------------------- */
+.appr-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+
+.appr-tab {
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+
+.appr-tab:hover {
+  color: var(--text);
+}
+
+.appr-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.appr-tab-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-transparent);
+  color: var(--accent-strong);
+}
+
+/* --- Item cards ----------------------------------------------- */
+.appr-list {
+  display: grid;
+  gap: 12px;
+}
+
+.appr-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  transition: border-color 0.15s;
+}
+
+.appr-item:hover {
+  border-color: var(--line-strong);
+}
+
+.appr-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.appr-item-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.appr-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  align-items: center;
+}
+
+.appr-item-content {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 8px 0 0;
+  line-height: 1.5;
+  max-height: 60px;
+  overflow: hidden;
+}
+
+/* --- Action buttons ------------------------------------------- */
+.appr-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.appr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.appr-btn--approve {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.appr-btn--approve:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+
+.appr-btn--reject {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.appr-btn--reject:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.appr-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Empty state ---------------------------------------------- */
+.appr-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px dashed var(--line);
+}
+
+.appr-empty-icon {
+  font-size: 2rem;
+  margin-bottom: 12px;
+}
+
+/* --- Log table ------------------------------------------------ */
+.appr-log-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.appr-log-item:last-child {
+  border-bottom: none;
+}
+
+.appr-log-action {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.appr-log-action.approved {
+  color: var(--success);
+}
+
+.appr-log-action.rejected {
+  color: var(--danger);
+}
+
+/* --- MCQ detail ----------------------------------------------- */
+.appr-mcq-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+}
+
+.appr-mcq-option {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+}
+
+.appr-mcq-option.correct {
+  background: var(--success-transparent);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--success);
+  font-weight: 600;
+}
