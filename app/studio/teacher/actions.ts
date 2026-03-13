@@ -200,11 +200,11 @@ export async function submitTeacherQuestionReview(formData: FormData) {
   const supabase = getSupabaseAdmin();
 
   const batchId = (formData.get("batch_id") as string | null)?.trim() ?? "";
-  const questionId = Number(formData.get("question_id"));
+  const questionId = (formData.get("question_id") as string | null)?.trim() ?? "";
   const decision = formData.get("decision");
   const note = (formData.get("note") as string | null)?.trim() ?? "";
 
-  if (!batchId || !Number.isFinite(questionId)) {
+  if (!batchId || !questionId) {
     redirect("/studio/teacher/revisao?error=Faltam%20dados%20da%20sess%C3%A3o%20de%20revis%C3%A3o.");
   }
 

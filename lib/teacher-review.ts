@@ -16,7 +16,7 @@ export type ReviewSubthemeOption = {
 };
 
 export type ReviewQuestion = {
-  id: number;
+  id: string;
   subtemaId: number | null;
   pergunta: string;
   opcaoA: string;
@@ -36,21 +36,21 @@ export type ReviewQuestion = {
 };
 
 export type ReviewDecisionRecord = {
-  questionId: number;
+  questionId: string;
   decision: ReviewDecision;
   note: string;
   createdAt: string;
 };
 
 export type ReviewBatchSummary = {
-  notificationId: number;
+  notificationId: string;
   batchId: string;
   status: ReviewBatchStatus;
   themeId: number;
   themeName: string;
   subtemaId: number | null;
   subtemaName: string | null;
-  questionIds: number[];
+  questionIds: string[];
   questionCount: number;
   currentIndex: number;
   createdAt: string;
@@ -72,7 +72,7 @@ export type ReviewDashboardData = {
 export type ReviewBatchSession = {
   batch: ReviewBatchSummary;
   questions: ReviewQuestion[];
-  decisions: Map<number, ReviewDecisionRecord>;
+  decisions: Map<string, ReviewDecisionRecord>;
   currentQuestion: ReviewQuestion | null;
   currentIndex: number;
   isCompleted: boolean;
@@ -86,7 +86,7 @@ type BatchMeta = {
   theme_name: string;
   subtema_id: number | null;
   subtema_name: string | null;
-  question_ids: number[];
+  question_ids: string[];
   question_count: number;
   current_index: number;
   status: ReviewBatchStatus;
@@ -96,7 +96,7 @@ type BatchMeta = {
 
 type ReviewMeta = {
   batch_id: string;
-  question_id: number;
+  question_id: string;
   decision: ReviewDecision;
   note: string;
   teacher_user_id: string;
@@ -105,7 +105,7 @@ type ReviewMeta = {
 };
 
 type NotificationRow = {
-  id: number;
+  id: string;
   type: string;
   message: string;
   meta: unknown;
@@ -142,9 +142,9 @@ function parseBatchStatus(value: unknown): ReviewBatchStatus {
   return value === "completed" || value === "abandoned" ? value : "active";
 }
 
-function parseNumberArray(value: unknown): number[] {
+function parseStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value.map(asNumber).filter((item): item is number => item !== null);
+  return value.map(asString).filter((item): item is string => item !== null);
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -185,7 +185,7 @@ function batchMessage(batchId: string, userId: string) {
   return `batch:${batchId}:${userId}`;
 }
 
-function reviewMessage(batchId: string, questionId: number, userId: string) {
+function reviewMessage(batchId: string, questionId: string, userId: string) {
   return `review:${batchId}:${questionId}:${userId}`;
 }
 
@@ -196,7 +196,7 @@ function parseBatchMeta(meta: unknown): BatchMeta | null {
   const teacherUserId = asString(meta.teacher_user_id);
   const themeId = asNumber(meta.theme_id);
   const themeName = asString(meta.theme_name);
-  const questionIds = parseNumberArray(meta.question_ids);
+  const questionIds = parseStringArray(meta.question_ids);
   const questionCount = asNumber(meta.question_count) ?? questionIds.length;
 
   if (!batchId || !teacherUserId || themeId === null || !themeName || questionIds.length === 0) {
@@ -224,11 +224,11 @@ function parseReviewMeta(meta: unknown): ReviewMeta | null {
   if (!isRecord(meta)) return null;
 
   const batchId = asString(meta.batch_id);
-  const questionId = asNumber(meta.question_id);
+  const questionId = asString(meta.question_id);
   const decision = parseDecision(meta.decision);
   const teacherUserId = asString(meta.teacher_user_id);
 
-  if (!batchId || questionId === null || !decision || !teacherUserId) {
+  if (!batchId || !questionId || !decision || !teacherUserId) {
     return null;
   }
 
@@ -287,10 +287,10 @@ function summarizeBatches(
   batches: Array<{ row: NotificationRow; meta: BatchMeta }>,
   reviews: Array<{ row: NotificationRow; meta: ReviewMeta }>
 ) {
-  const reviewsByBatch = new Map<string, Map<number, ReviewDecisionRecord>>();
+  const reviewsByBatch = new Map<string, Map<string, ReviewDecisionRecord>>();
 
   for (const review of reviews) {
-    const batchReviews = reviewsByBatch.get(review.meta.batch_id) ?? new Map<number, ReviewDecisionRecord>();
+    const batchReviews = reviewsByBatch.get(review.meta.batch_id) ?? new Map<string, ReviewDecisionRecord>();
     batchReviews.set(review.meta.question_id, {
       questionId: review.meta.question_id,
       decision: review.meta.decision,
@@ -301,7 +301,7 @@ function summarizeBatches(
   }
 
   return batches.map(({ row, meta }) => {
-    const batchReviews = reviewsByBatch.get(meta.batch_id) ?? new Map<number, ReviewDecisionRecord>();
+    const batchReviews = reviewsByBatch.get(meta.batch_id) ?? new Map<string, ReviewDecisionRecord>();
     const decisionCounts: Record<ReviewDecision, number> = {
       approved: 0,
       has_issue: 0,
@@ -410,7 +410,7 @@ export async function getTeacherReviewBatchSession(userId: string, batchId: stri
     return null;
   }
 
-  const questionsById = new Map<number, ReviewQuestion>();
+  const questionsById = new Map<string, ReviewQuestion>();
 
   for (const row of data ?? []) {
     const subtema = row.subtema as unknown as
@@ -442,7 +442,7 @@ export async function getTeacherReviewBatchSession(userId: string, batchId: stri
     .map((questionId) => questionsById.get(questionId))
     .filter((question): question is ReviewQuestion => Boolean(question));
 
-  const decisions = new Map<number, ReviewDecisionRecord>();
+  const decisions = new Map<string, ReviewDecisionRecord>();
 
   for (const review of reviews) {
     if (review.meta.batch_id !== batchId) continue;
@@ -544,12 +544,9 @@ export async function getSampledQuestionIds(
   return sample.map((question) => question.id);
 }
 
-export async function updateTeacherBatchMeta(notificationId: number, meta: BatchMeta) {
+export async function updateTeacherBatchMeta(notificationId: string, meta: BatchMeta) {
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase
-    .from("ops_notifications")
-    .update({ meta })
-    .eq("id", notificationId);
+  const { error } = await supabase.from("ops_notifications").update({ meta }).eq("id", notificationId);
 
   if (error) {
     console.error("Failed to update teacher review batch:", error);
@@ -571,7 +568,7 @@ export async function abandonActiveTeacherBatches(userId: string) {
   );
 }
 
-export async function getTeacherQuestionReviewRow(batchId: string, questionId: number, userId: string) {
+export async function getTeacherQuestionReviewRow(batchId: string, questionId: string, userId: string) {
   const supabase = getSupabaseAdmin();
   const message = reviewMessage(batchId, questionId, userId);
   const { data, error } = await supabase
