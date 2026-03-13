@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MathText } from "@/components/math-text";
 import { submitTeacherQuestionReview } from "../../actions";
 import { requireTeacherUser } from "@/lib/studio-auth";
 import { getTeacherReviewBatchSession } from "@/lib/teacher-review";
@@ -76,6 +77,14 @@ export default async function TeacherReviewBatchPage({
   }
 
   const question = session.currentQuestion;
+  const correctOption =
+    question.opcaoCorreta === "A"
+      ? question.opcaoA
+      : question.opcaoCorreta === "B"
+        ? question.opcaoB
+        : question.opcaoCorreta === "C"
+          ? question.opcaoC
+          : question.opcaoD;
 
   return (
     <div className="st-review-screen">
@@ -110,7 +119,9 @@ export default async function TeacherReviewBatchPage({
             <div className="st-review-card-top">
               <div>
                 <span className="st-card-kicker">Enunciado</span>
-                <h2 className="st-review-question-title">{question.pergunta}</h2>
+                <h2 className="st-review-question-title">
+                  <MathText text={question.pergunta} />
+                </h2>
               </div>
               <div className="st-review-tags">
                 {question.dificuldade && <span className="st-badge st-badge--neutral">{question.dificuldade}</span>}
@@ -130,7 +141,9 @@ export default async function TeacherReviewBatchPage({
                   className={`st-answer-card${question.opcaoCorreta === option.key ? " is-correct" : ""}`}
                 >
                   <span className="st-answer-letter">{option.key}</span>
-                  <span>{option.value}</span>
+                  <span>
+                    <MathText text={option.value} />
+                  </span>
                 </div>
               ))}
             </div>
@@ -177,20 +190,16 @@ export default async function TeacherReviewBatchPage({
           <div className="st-review-card">
             <span className="st-card-kicker">Resposta certa</span>
             <div className="st-correct-answer">{question.opcaoCorreta}</div>
-            <p className="st-page-subtitle" style={{ marginTop: 12 }}>
-              {question.opcaoCorreta === "A"
-                ? question.opcaoA
-                : question.opcaoCorreta === "B"
-                  ? question.opcaoB
-                  : question.opcaoCorreta === "C"
-                    ? question.opcaoC
-                    : question.opcaoD}
-            </p>
+            <div className="st-page-subtitle" style={{ marginTop: 12 }}>
+              <MathText text={correctOption} />
+            </div>
           </div>
 
           <div className="st-review-card">
             <span className="st-card-kicker">Explicação</span>
-            <p className="st-review-explanation">{question.explicacao}</p>
+            <div className="st-review-explanation">
+              <MathText text={question.explicacao} />
+            </div>
           </div>
 
           <div className="st-review-card">

@@ -1,7 +1,35 @@
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { notFound } from "next/navigation";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { MathText } from "@/components/math-text";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireTeacherUser } from "@/lib/studio-auth";
+
+function OptionBlock({
+  optionKey,
+  value,
+  isCorrect,
+}: {
+  optionKey: string;
+  value: string;
+  isCorrect: boolean;
+}) {
+  return (
+    <div className="st-field">
+      <span className="st-label">{optionKey}</span>
+      <div
+        style={{
+          margin: 0,
+          fontWeight: isCorrect ? 700 : 400,
+          color: isCorrect ? "#059669" : "inherit",
+          lineHeight: 1.8,
+        }}
+      >
+        {isCorrect && <span style={{ marginRight: 6 }}>✓</span>}
+        <MathText text={value} />
+      </div>
+    </div>
+  );
+}
 
 export default async function EditPerguntaPage({ params }: { params: Promise<{ id: string }> }) {
   await requireTeacherUser();
@@ -37,42 +65,26 @@ export default async function EditPerguntaPage({ params }: { params: Promise<{ i
         <div className="st-form" style={{ gap: 16 }}>
           <div className="st-field">
             <span className="st-label">Pergunta</span>
-            <p style={{ margin: 0, lineHeight: 1.6 }}>{pergunta.pergunta}</p>
-          </div>
-
-          <div className="st-field-row">
-            <div className="st-field">
-              <span className="st-label">A</span>
-              <p style={{ margin: 0, fontWeight: pergunta.opcao_correta === "A" ? 700 : 400, color: pergunta.opcao_correta === "A" ? "#059669" : "inherit" }}>
-                {pergunta.opcao_correta === "A" && "✓ "}{pergunta.opcao_a}
-              </p>
-            </div>
-            <div className="st-field">
-              <span className="st-label">B</span>
-              <p style={{ margin: 0, fontWeight: pergunta.opcao_correta === "B" ? 700 : 400, color: pergunta.opcao_correta === "B" ? "#059669" : "inherit" }}>
-                {pergunta.opcao_correta === "B" && "✓ "}{pergunta.opcao_b}
-              </p>
+            <div style={{ margin: 0, lineHeight: 1.8 }}>
+              <MathText text={pergunta.pergunta} />
             </div>
           </div>
 
           <div className="st-field-row">
-            <div className="st-field">
-              <span className="st-label">C</span>
-              <p style={{ margin: 0, fontWeight: pergunta.opcao_correta === "C" ? 700 : 400, color: pergunta.opcao_correta === "C" ? "#059669" : "inherit" }}>
-                {pergunta.opcao_correta === "C" && "✓ "}{pergunta.opcao_c}
-              </p>
-            </div>
-            <div className="st-field">
-              <span className="st-label">D</span>
-              <p style={{ margin: 0, fontWeight: pergunta.opcao_correta === "D" ? 700 : 400, color: pergunta.opcao_correta === "D" ? "#059669" : "inherit" }}>
-                {pergunta.opcao_correta === "D" && "✓ "}{pergunta.opcao_d}
-              </p>
-            </div>
+            <OptionBlock optionKey="A" value={pergunta.opcao_a} isCorrect={pergunta.opcao_correta === "A"} />
+            <OptionBlock optionKey="B" value={pergunta.opcao_b} isCorrect={pergunta.opcao_correta === "B"} />
+          </div>
+
+          <div className="st-field-row">
+            <OptionBlock optionKey="C" value={pergunta.opcao_c} isCorrect={pergunta.opcao_correta === "C"} />
+            <OptionBlock optionKey="D" value={pergunta.opcao_d} isCorrect={pergunta.opcao_correta === "D"} />
           </div>
 
           <div className="st-field">
             <span className="st-label">Explicação</span>
-            <p style={{ margin: 0, lineHeight: 1.6 }}>{pergunta.explicacao}</p>
+            <div style={{ margin: 0, lineHeight: 1.8 }}>
+              <MathText text={pergunta.explicacao} />
+            </div>
           </div>
 
           <div className="st-field-row">

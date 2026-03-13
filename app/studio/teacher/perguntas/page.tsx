@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MathText } from "@/components/math-text";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireTeacherUser } from "@/lib/studio-auth";
 
@@ -28,26 +29,36 @@ export default async function TeacherPerguntasPage() {
 
       {!perguntas?.length ? (
         <div className="st-empty">
-          <div className="st-empty-icon">❓</div>
+          <div className="st-empty-icon">?</div>
           <p>Ainda não foram submetidas perguntas MCQ.</p>
         </div>
       ) : (
         <div className="st-list">
-          {perguntas.map((p) => {
-            const statusClass = p.status === "live" ? "live" : p.status === "rejected" ? "rejected" : "pending";
+          {perguntas.map((pergunta) => {
+            const statusClass =
+              pergunta.status === "live" ? "live" : pergunta.status === "rejected" ? "rejected" : "pending";
 
             return (
-              <Link key={p.id} href={`/studio/teacher/perguntas/${p.id}`} className="st-list-item" style={{ textDecoration: "none", color: "inherit" }}>
+              <Link
+                key={pergunta.id}
+                href={`/studio/teacher/perguntas/${pergunta.id}`}
+                className="st-list-item"
+                style={{ textDecoration: "none", color: "inherit" }}
+              >
                 <div className="st-list-item-top">
                   <div>
-                    <h3 className="st-list-item-title">{p.pergunta.substring(0, 120)}{p.pergunta.length > 120 ? "..." : ""}</h3>
+                    <h3 className="st-list-item-title">
+                      <MathText
+                        text={`${pergunta.pergunta.substring(0, 120)}${pergunta.pergunta.length > 120 ? "..." : ""}`}
+                      />
+                    </h3>
                     <div className="st-list-item-meta">
-                      <span className={`st-badge st-badge--${statusClass}`}>{p.status ?? "pending"}</span>
-                      {(p.subtema as unknown as { nome: string } | null)?.nome && (
-                        <span>{(p.subtema as unknown as { nome: string }).nome}</span>
+                      <span className={`st-badge st-badge--${statusClass}`}>{pergunta.status ?? "pending"}</span>
+                      {(pergunta.subtema as unknown as { nome: string } | null)?.nome && (
+                        <span>{(pergunta.subtema as unknown as { nome: string }).nome}</span>
                       )}
-                      <span>{p.dificuldade}</span>
-                      <span>{new Date(p.created_at!).toLocaleDateString("pt-PT")}</span>
+                      <span>{pergunta.dificuldade}</span>
+                      <span>{new Date(pergunta.created_at!).toLocaleDateString("pt-PT")}</span>
                     </div>
                   </div>
                 </div>
