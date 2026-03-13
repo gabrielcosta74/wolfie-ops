@@ -12,8 +12,10 @@ function unauthorizedResponse() {
 
 export function middleware(req: NextRequest) {
   // Public and teacher portals — bypass admin basic auth
-  const publicPrefixes = ["/contribuir", "/studio"];
-  if (publicPrefixes.some((p) => req.nextUrl.pathname.startsWith(p))) {
+  const publicPrefixes = ["/manager/content/academy", "/contribuir", "/studio"];
+  const isPublicPath = req.nextUrl.pathname === "/" || publicPrefixes.some((p) => req.nextUrl.pathname.startsWith(p));
+  
+  if (isPublicPath) {
     return NextResponse.next();
   }
 
