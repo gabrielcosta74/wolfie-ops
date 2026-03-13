@@ -4,16 +4,25 @@ import { useState, useTransition } from "react";
 import { approveSubmission, rejectSubmission, approveMCQ, rejectMCQ } from "./actions";
 
 type Submission = {
-  id: string;
-  type: string;
-  title: string;
-  url: string | null;
+  attachments: Array<{
+    downloadUrl: string | null;
+    mimeType: string;
+    name: string;
+    path: string;
+    size: number;
+  }>;
   content: string | null;
+  created_at: string | null;
   email: string | null;
   escola: string | null;
+  id: string;
+  source_name: string | null;
   status: string | null;
-  created_at: string | null;
-  subtema: any;
+  subtema: unknown;
+  suggestion: string | null;
+  title: string;
+  type: string;
+  url: string | null;
 };
 
 type MCQ = {
@@ -30,7 +39,7 @@ type MCQ = {
   source: string | null;
   submitted_by_email: string | null;
   created_at: string | null;
-  subtema: any;
+  subtema: unknown;
 };
 
 type LogEntry = {
@@ -44,22 +53,22 @@ type LogEntry = {
 
 type Tab = "submissions" | "mcqs" | "log";
 
-export function ApprovalsTabs({ submissions, mcqs, log }: { submissions: Submission[]; mcqs: MCQ[]; log: LogEntry[] }) {
+export function ApprovalsTabs({ submissions, mcqs, log }: { log: LogEntry[]; mcqs: MCQ[]; submissions: Submission[] }) {
   const [activeTab, setActiveTab] = useState<Tab>("submissions");
 
   return (
     <>
       <div className="appr-tabs">
         <button className={`appr-tab${activeTab === "submissions" ? " active" : ""}`} onClick={() => setActiveTab("submissions")}>
-          📥 Sugestões
+          Sugestões
           {submissions.length > 0 && <span className="appr-tab-badge">{submissions.length}</span>}
         </button>
         <button className={`appr-tab${activeTab === "mcqs" ? " active" : ""}`} onClick={() => setActiveTab("mcqs")}>
-          ❓ MCQ Pendentes
+          MCQ pendentes
           {mcqs.length > 0 && <span className="appr-tab-badge">{mcqs.length}</span>}
         </button>
         <button className={`appr-tab${activeTab === "log" ? " active" : ""}`} onClick={() => setActiveTab("log")}>
-          📋 Log
+          Log
         </button>
       </div>
 
@@ -76,42 +85,78 @@ function SubmissionsList({ items }: { items: Submission[] }) {
   if (!items.length) {
     return (
       <div className="appr-empty">
-        <div className="appr-empty-icon">✅</div>
-        <p>Nenhuma sugestão pendente!</p>
+        <div className="appr-empty-icon">OK</div>
+        <p>Nenhuma sugestão pendente.</p>
       </div>
     );
   }
 
   return (
     <div className="appr-list">
-      {items.map((s) => (
-        <div key={s.id} className="appr-item">
+      {items.map((submission) => (
+        <div key={submission.id} className="appr-item">
           <div className="appr-item-info">
-            <h3 className="appr-item-title">{s.title}</h3>
+            <h3 className="appr-item-title">{submission.title}</h3>
+
             <div className="appr-item-meta">
-              <span className="badge info">{s.type}</span>
-              {(s.subtema as unknown as { nome: string } | null)?.nome && <span>{(s.subtema as unknown as { nome: string }).nome}</span>}
-              {s.email && <span>📧 {s.email}</span>}
-              {s.escola && <span>🏫 {s.escola}</span>}
-              {s.created_at && <span>{new Date(s.created_at).toLocaleDateString("pt-PT")}</span>}
+              <span className="badge info">{submission.type}</span>
+              {submission.suggestion && <span>{submission.suggestion}</span>}
+              {(submission.subtema as { nome?: string } | null)?.nome && <span>{(submission.subtema as { nome: string }).nome}</span>}
+              {submission.source_name && <span>{submission.source_name}</span>}
+              {submission.email && <span>{submission.email}</span>}
+              {submission.escola && <span>{submission.escola}</span>}
+              {submission.created_at && <span>{new Date(submission.created_at).toLocaleDateString("pt-PT")}</span>}
             </div>
-            {s.url && <div className="appr-item-content"><a href={s.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>{s.url}</a></div>}
-            {s.content && <div className="appr-item-content">{s.content}</div>}
+
+            {submission.url && (
+              <div className="appr-item-content">
+                <a href={submission.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                  {submission.url}
+                </a>
+              </div>
+            )}
+
+            {submission.content && <div className="appr-item-content">{submission.content}</div>}
+
+            {submission.attachments.length > 0 && (
+              <div className="appr-attachment-list">
+                {submission.attachments.map((attachment) => (
+                  attachment.downloadUrl ? (
+                    <a
+                      key={attachment.path}
+                      className="appr-attachment"
+                      href={attachment.downloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span>{attachment.name}</span>
+                      <span>{Math.round(attachment.size / 1024)} KB</span>
+                    </a>
+                  ) : (
+                    <span key={attachment.path} className="appr-attachment">
+                      <span>{attachment.name}</span>
+                      <span>{Math.round(attachment.size / 1024)} KB</span>
+                    </span>
+                  )
+                ))}
+              </div>
+            )}
           </div>
+
           <div className="appr-actions">
             <button
               className="appr-btn appr-btn--approve"
               disabled={pending}
-              onClick={() => startTransition(async () => { await approveSubmission(s.id); })}
+              onClick={() => startTransition(async () => { await approveSubmission(submission.id); })}
             >
-              ✓ Aprovar
+              Aprovar
             </button>
             <button
               className="appr-btn appr-btn--reject"
               disabled={pending}
-              onClick={() => startTransition(async () => { await rejectSubmission(s.id); })}
+              onClick={() => startTransition(async () => { await rejectSubmission(submission.id); })}
             >
-              ✕ Rejeitar
+              Rejeitar
             </button>
           </div>
         </div>
@@ -126,51 +171,52 @@ function MCQList({ items }: { items: MCQ[] }) {
   if (!items.length) {
     return (
       <div className="appr-empty">
-        <div className="appr-empty-icon">✅</div>
-        <p>Nenhuma pergunta MCQ pendente!</p>
+        <div className="appr-empty-icon">OK</div>
+        <p>Nenhuma pergunta MCQ pendente.</p>
       </div>
     );
   }
 
   return (
     <div className="appr-list">
-      {items.map((q) => (
-        <div key={q.id} className="appr-item">
+      {items.map((question) => (
+        <div key={question.id} className="appr-item">
           <div className="appr-item-info">
-            <h3 className="appr-item-title">{q.pergunta}</h3>
+            <h3 className="appr-item-title">{question.pergunta}</h3>
             <div className="appr-item-meta">
-              {(q.subtema as unknown as { nome: string } | null)?.nome && <span>{(q.subtema as unknown as { nome: string }).nome}</span>}
-              <span>{q.dificuldade}</span>
-              {q.submitted_by_email && <span>📧 {q.submitted_by_email}</span>}
-              {q.created_at && <span>{new Date(q.created_at).toLocaleDateString("pt-PT")}</span>}
+              {(question.subtema as { nome?: string } | null)?.nome && <span>{(question.subtema as { nome: string }).nome}</span>}
+              <span>{question.dificuldade}</span>
+              {question.submitted_by_email && <span>{question.submitted_by_email}</span>}
+              {question.created_at && <span>{new Date(question.created_at).toLocaleDateString("pt-PT")}</span>}
             </div>
             <div className="appr-mcq-options">
-              {["A", "B", "C", "D"].map((opt) => {
-                const key = `opcao_${opt.toLowerCase()}` as keyof MCQ;
-                const isCorrect = q.opcao_correta.trim() === opt;
+              {["A", "B", "C", "D"].map((option) => {
+                const key = `opcao_${option.toLowerCase()}` as keyof MCQ;
+                const isCorrect = question.opcao_correta.trim() === option;
                 return (
-                  <div key={opt} className={`appr-mcq-option${isCorrect ? " correct" : ""}`}>
-                    <strong>{opt}:</strong> {q[key] as string}
+                  <div key={option} className={`appr-mcq-option${isCorrect ? " correct" : ""}`}>
+                    <strong>{option}:</strong> {question[key] as string}
                   </div>
                 );
               })}
             </div>
-            {q.explicacao && <div className="appr-item-content" style={{ marginTop: 8 }}>💡 {q.explicacao}</div>}
+            {question.explicacao && <div className="appr-item-content" style={{ marginTop: 8 }}>{question.explicacao}</div>}
           </div>
+
           <div className="appr-actions">
             <button
               className="appr-btn appr-btn--approve"
               disabled={pending}
-              onClick={() => startTransition(async () => { await approveMCQ(q.id); })}
+              onClick={() => startTransition(async () => { await approveMCQ(question.id); })}
             >
-              ✓ Aprovar
+              Aprovar
             </button>
             <button
               className="appr-btn appr-btn--reject"
               disabled={pending}
-              onClick={() => startTransition(async () => { await rejectMCQ(q.id); })}
+              onClick={() => startTransition(async () => { await rejectMCQ(question.id); })}
             >
-              ✕ Rejeitar
+              Rejeitar
             </button>
           </div>
         </div>
@@ -183,7 +229,7 @@ function LogList({ items }: { items: LogEntry[] }) {
   if (!items.length) {
     return (
       <div className="appr-empty">
-        <div className="appr-empty-icon">📋</div>
+        <div className="appr-empty-icon">LOG</div>
         <p>Nenhuma atividade recente.</p>
       </div>
     );
@@ -193,12 +239,6 @@ function LogList({ items }: { items: LogEntry[] }) {
     <div className="panel">
       {items.map((entry) => (
         <div key={entry.id} className="appr-log-item">
-          <span style={{ fontSize: "1.2rem" }}>
-            {entry.type === "public_submission" && "📥"}
-            {entry.type === "teacher_mcq" && "❓"}
-            {entry.type === "teacher_content" && "📚"}
-            {entry.type === "teacher_flag" && "🚩"}
-          </span>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 500, fontSize: "0.9rem" }}>{entry.message}</div>
             {entry.created_at && (

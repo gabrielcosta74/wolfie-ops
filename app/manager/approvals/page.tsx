@@ -1,4 +1,8 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  CONTRIBUTION_ATTACHMENT_BUCKET,
+  parseContributionContent,
+} from "@/lib/public-submissions";
 import { ApprovalsTabs } from "./ApprovalsTabs";
 import "./approvals.css";
 
@@ -26,6 +30,38 @@ export default async function ApprovalsPage() {
       .limit(30),
   ]);
 
+  const submissions = await Promise.all(
+    (submissionsRes.data ?? []).map(async (submission) => {
+      const parsed = parseContributionContent(submission.content);
+      const attachments = await Promise.all(
+        (parsed.meta.attachments ?? []).map(async (attachment) => {
+          const { data, error } = await supabase.storage
+            .from(CONTRIBUTION_ATTACHMENT_BUCKET)
+            .createSignedUrl(attachment.path, 60 * 60 * 24 * 7, {
+              download: attachment.name,
+            });
+
+          if (error) {
+            console.error("Failed to create signed attachment URL:", error);
+          }
+
+          return {
+            ...attachment,
+            downloadUrl: data?.signedUrl ?? null,
+          };
+        })
+      );
+
+      return {
+        ...submission,
+        attachments,
+        content: parsed.description || null,
+        source_name: parsed.meta.sourceName ?? null,
+        suggestion: parsed.meta.suggestion ?? null,
+      };
+    })
+  );
+
   return (
     <div style={{ padding: 32 }}>
       <div className="page-header">
@@ -34,7 +70,7 @@ export default async function ApprovalsPage() {
       </div>
 
       <ApprovalsTabs
-        submissions={submissionsRes.data ?? []}
+        submissions={submissions}
         mcqs={mcqRes.data ?? []}
         log={logRes.data ?? []}
       />

@@ -310,7 +310,7 @@ export function FocusTriageView({ pkg }: { pkg: TriagePackage }) {
     <div style={{ padding: "40px 24px 56px", maxWidth: 1080, margin: "0 auto" }}>
       <div style={{ marginBottom: 24 }}>
         <Link
-          href="/"
+          href="/inbox"
           style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "var(--muted)", fontWeight: 600, textDecoration: "none" }}
         >
           <ArrowLeft size={18} />

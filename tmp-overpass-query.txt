@@ -1,0 +1,8 @@
+[out:json][timeout:120];
+area["ISO3166-1"="PT"][admin_level=2]->.searchArea;
+(
+  node["amenity"="school"]["name"~"Secund",i](area.searchArea);
+  way["amenity"="school"]["name"~"Secund",i](area.searchArea);
+  relation["amenity"="school"]["name"~"Secund",i](area.searchArea);
+);
+out tags;

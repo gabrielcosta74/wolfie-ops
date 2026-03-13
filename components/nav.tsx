@@ -7,7 +7,7 @@ import { Inbox, History, Calendar, Settings, Database, LayoutDashboard, DollarSi
 type NavItem = { href: string; label: string; badge?: number; badgeColor?: string; icon: React.ReactNode; group: string };
 
 const items: NavItem[] = [
-  { group: "Curadoria Editorial", href: "/", label: "Inbox", icon: <Inbox size={16} /> },
+  { group: "Curadoria Editorial", href: "/inbox", label: "Inbox", icon: <Inbox size={16} /> },
   { group: "Curadoria Editorial", href: "/reviews", label: "Revisões", icon: <History size={16} /> },
   { group: "Curadoria Editorial", href: "/schedule", label: "Calendário", icon: <Calendar size={16} /> },
   { group: "Curadoria Editorial", href: "/manager/agents-workflow", label: "Workflow AI", icon: <Cpu size={16} /> },

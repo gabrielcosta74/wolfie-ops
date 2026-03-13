@@ -2,13 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-
-export type TeacherActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-};
-
-const idleState: TeacherActionState = { status: "idle" };
+import type { TeacherActionState } from "./state";
 
 function normalizeEmail(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -140,5 +134,3 @@ export async function promoteTeacher(
     message: `Role teacher atribuído a ${email}.`,
   };
 }
-
-export { idleState };

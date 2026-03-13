@@ -1,8 +1,18 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireTeacherUser } from "@/lib/studio-auth";
+import {
+  abandonActiveTeacherBatches,
+  getSampledQuestionIds,
+  getTeacherQuestionReviewRow,
+  getTeacherReviewBatchRow,
+  getTeacherReviewBatchSession,
+  updateTeacherBatchMeta,
+  type ReviewDecision,
+} from "@/lib/teacher-review";
 
 export async function createContent(formData: FormData): Promise<{ error: string } | never> {
   await requireTeacherUser();
@@ -87,7 +97,9 @@ export async function createMCQ(formData: FormData): Promise<{ error: string } |
     meta: { pergunta: pergunta.substring(0, 100) },
   });
 
-  redirect("/studio/teacher/perguntas");
+  revalidatePath("/studio/teacher");
+  revalidatePath("/studio/teacher/progresso");
+  redirect("/studio/teacher/sugestoes/nova?success=1");
 }
 
 export async function submitFlag(formData: FormData): Promise<{ error: string } | never> {
@@ -121,4 +133,155 @@ export async function submitFlag(formData: FormData): Promise<{ error: string } 
   }
 
   redirect("/studio/teacher/flags?success=1");
+}
+
+export async function startTeacherReviewBatch(formData: FormData) {
+  const user = await requireTeacherUser();
+  const supabase = getSupabaseAdmin();
+
+  const themeId = Number(formData.get("theme_id"));
+  const themeName = (formData.get("theme_name") as string | null)?.trim() ?? "";
+  const subthemeIdValue = (formData.get("subtheme_id") as string | null)?.trim() ?? "";
+  const subthemeName = (formData.get("subtheme_name") as string | null)?.trim() ?? "";
+  const subthemeId = subthemeIdValue ? Number(subthemeIdValue) : null;
+
+  if (!Number.isFinite(themeId) || !themeName) {
+    redirect("/studio/teacher/revisao?error=Seleciona%20um%20tema%20para%20come%C3%A7ar.");
+  }
+
+  const questionIds = await getSampledQuestionIds(themeId, Number.isFinite(subthemeId) ? subthemeId : null, user.id, 20);
+
+  if (!questionIds.length) {
+    redirect("/studio/teacher/revisao?error=N%C3%A3o%20existem%20perguntas%20suficientes%20para%20essa%20sele%C3%A7%C3%A3o.");
+  }
+
+  await abandonActiveTeacherBatches(user.id);
+
+  const batchId = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("ops_notifications")
+    .insert({
+      type: "teacher_review_batch",
+      message: `batch:${batchId}:${user.id}`,
+      meta: {
+        batch_id: batchId,
+        teacher_user_id: user.id,
+        teacher_email: user.email ?? null,
+        theme_id: themeId,
+        theme_name: themeName,
+        subtema_id: Number.isFinite(subthemeId) ? subthemeId : null,
+        subtema_name: subthemeName || null,
+        question_ids: questionIds,
+        question_count: questionIds.length,
+        current_index: 0,
+        status: "active",
+        started_at: now,
+        completed_at: null,
+      },
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("Failed to create teacher review batch:", error);
+    redirect("/studio/teacher/revisao?error=N%C3%A3o%20foi%20poss%C3%ADvel%20criar%20a%20sess%C3%A3o%20de%20revis%C3%A3o.");
+  }
+
+  revalidatePath("/studio/teacher");
+  revalidatePath("/studio/teacher/revisao");
+  revalidatePath("/studio/teacher/progresso");
+  redirect(`/studio/teacher/revisao/${batchId}`);
+}
+
+export async function submitTeacherQuestionReview(formData: FormData) {
+  const user = await requireTeacherUser();
+  const supabase = getSupabaseAdmin();
+
+  const batchId = (formData.get("batch_id") as string | null)?.trim() ?? "";
+  const questionId = Number(formData.get("question_id"));
+  const decision = formData.get("decision");
+  const note = (formData.get("note") as string | null)?.trim() ?? "";
+
+  if (!batchId || !Number.isFinite(questionId)) {
+    redirect("/studio/teacher/revisao?error=Faltam%20dados%20da%20sess%C3%A3o%20de%20revis%C3%A3o.");
+  }
+
+  if (
+    decision !== "approved" &&
+    decision !== "has_issue" &&
+    decision !== "critical_flag" &&
+    decision !== "skipped"
+  ) {
+    redirect(`/studio/teacher/revisao/${batchId}?error=Escolhe%20uma%20decis%C3%A3o%20v%C3%A1lida.`);
+  }
+
+  const batchRow = await getTeacherReviewBatchRow(batchId, user.id);
+
+  if (!batchRow) {
+    redirect("/studio/teacher/revisao?error=Sess%C3%A3o%20de%20revis%C3%A3o%20n%C3%A3o%20encontrada.");
+  }
+
+  const existingReview = await getTeacherQuestionReviewRow(batchId, questionId, user.id);
+  const reviewPayload = {
+    type: "teacher_question_review",
+    message: `review:${batchId}:${questionId}:${user.id}`,
+    meta: {
+      batch_id: batchId,
+      question_id: questionId,
+      decision: decision as ReviewDecision,
+      note,
+      teacher_user_id: user.id,
+      teacher_email: user.email ?? null,
+      reviewed_at: new Date().toISOString(),
+    },
+  };
+
+  if (existingReview) {
+    const { error } = await supabase
+      .from("ops_notifications")
+      .update(reviewPayload)
+      .eq("id", existingReview.id);
+
+    if (error) {
+      console.error("Failed to update teacher review decision:", error);
+      redirect(`/studio/teacher/revisao/${batchId}?error=N%C3%A3o%20foi%20poss%C3%ADvel%20guardar%20a%20decis%C3%A3o.`);
+    }
+  } else {
+    const { error } = await supabase.from("ops_notifications").insert(reviewPayload);
+
+    if (error) {
+      console.error("Failed to create teacher review decision:", error);
+      redirect(`/studio/teacher/revisao/${batchId}?error=N%C3%A3o%20foi%20poss%C3%ADvel%20guardar%20a%20decis%C3%A3o.`);
+    }
+  }
+
+  const session = await getTeacherReviewBatchSession(user.id, batchId);
+
+  if (session) {
+    const completed = session.questions.length > 0 && session.decisions.size >= session.questions.length;
+    await updateTeacherBatchMeta(batchRow.id, {
+      batch_id: batchId,
+      teacher_user_id: user.id,
+      teacher_email: user.email ?? null,
+      theme_id: session.batch.themeId,
+      theme_name: session.batch.themeName,
+      subtema_id: session.batch.subtemaId,
+      subtema_name: session.batch.subtemaName,
+      question_ids: session.batch.questionIds,
+      question_count: session.batch.questionCount,
+      current_index: completed ? session.batch.questionCount : session.currentIndex,
+      status: completed ? "completed" : "active",
+      started_at: session.batch.createdAt,
+      completed_at: completed ? new Date().toISOString() : null,
+    });
+  }
+
+  revalidatePath("/studio/teacher");
+  revalidatePath("/studio/teacher/revisao");
+  revalidatePath(`/studio/teacher/revisao/${batchId}`);
+  revalidatePath("/studio/teacher/progresso");
+
+  redirect(`/studio/teacher/revisao/${batchId}`);
 }

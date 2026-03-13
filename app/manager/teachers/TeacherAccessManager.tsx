@@ -2,12 +2,8 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  createTeacher,
-  idleState,
-  promoteTeacher,
-  type TeacherActionState,
-} from "./actions";
+import { createTeacher, promoteTeacher } from "./actions";
+import { idleState, type TeacherActionState } from "./state";
 
 type TeacherRow = {
   id: string;
