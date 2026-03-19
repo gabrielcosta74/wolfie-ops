@@ -41,7 +41,8 @@ export function ContributionCTA() {
   const actionY = useTransform(scrollYProgress, [0.75, 0.85, 1], [100, 0, 0]);
 
   return (
-    <section ref={containerRef} className="relative h-[350vh] bg-black">
+    <>
+      <section ref={containerRef} className="relative h-[350vh] bg-black">
       <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center perspective-[1000px]">
         
         {/* Deep Space Background */}
@@ -135,7 +136,7 @@ export function ContributionCTA() {
           className="absolute inset-0 flex flex-col items-center justify-center px-4 md:px-6 z-20"
         >
           {/* Glassmorphism Vault Block */}
-          <div className="relative w-full max-w-3xl bg-[#0a0f1d]/90 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-8 sm:p-10 md:p-12 text-center backdrop-blur-3xl shadow-[0_0_120px_rgba(37,99,235,0.15)] overflow-hidden">
+          <div className="relative w-full max-w-3xl max-h-[85dvh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-[#0a0f1d]/90 border border-white/10 rounded-[2rem] md:rounded-[2.5rem] p-8 sm:p-10 md:p-12 text-center backdrop-blur-3xl shadow-[0_0_120px_rgba(37,99,235,0.15)]">
              
              {/* Inner Top Highlight */}
              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -178,7 +179,7 @@ export function ContributionCTA() {
                   <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/10 to-transparent opacity-50 pointer-events-none z-10" />
 
                   <span className="relative z-20 font-bold text-lg tracking-wide text-white drop-shadow-sm group-hover:text-blue-100 transition-colors">
-                     Entrar no Cofre
+                     Contribuir
                   </span>
 
                   {/* Sparkle Arrow Icon */}
@@ -189,22 +190,24 @@ export function ContributionCTA() {
              </Link>
            </div>
         </motion.div>
-
-      </div>
-      
-      {/* Classic Footer Links underneath Phase 3 - Restored spacing */}
-      <div className="absolute bottom-8 left-0 right-0 max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-slate-600 text-sm font-medium tracking-tight z-50 pointer-events-auto">
-        <div className="flex items-center gap-2 mb-4 md:mb-0">
-           <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden p-[2px]">
-              <img src="/wolf-mascot.png" alt="Wolfi Logo" className="w-[85%] h-[85%] object-contain" />
-           </div>
-           <span>© 2026 Wolfi AI. Todos os direitos reservados.</span>
-        </div>
-        <div className="flex gap-6">
-          <Link href="/privacy" className="hover:text-slate-400 transition-colors">Privacidade</Link>
-          <Link href="/terms" className="hover:text-slate-400 transition-colors">Termos</Link>
-        </div>
       </div>
     </section>
+      
+      {/* Classic Footer Links - Fully external robust footer */}
+      <footer className="w-full bg-black pt-16 pb-12 border-t border-white/10 pointer-events-auto">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-slate-600 text-sm font-medium tracking-tight">
+          <div className="flex items-center gap-2 mb-4 md:mb-0">
+             <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center overflow-hidden p-[2px]">
+                <img src="/wolf-mascot.png" alt="Wolfi Logo" className="w-[85%] h-[85%] object-contain" />
+             </div>
+             <span>© 2026 Wolfi AI. Todos os direitos reservados.</span>
+          </div>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-slate-400 transition-colors">Privacidade</Link>
+            <Link href="/terms" className="hover:text-slate-400 transition-colors">Termos</Link>
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }

@@ -7,7 +7,7 @@ import { ZoomParallax } from "@/components/landing/ZoomParallax";
 import { LogoCarousel, type Logo } from "@/components/landing/LogoCarousel";
 
 export const metadata = {
-  title: "Wolfi | Top AI Math Tutor",
+  title: "Wolfi",
 };
 
 const TecnicoLogo = () => (

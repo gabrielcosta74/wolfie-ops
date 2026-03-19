@@ -26,7 +26,7 @@ export default function StudioLoginPage() {
               type="text"
               id="st-identifier"
               className="st-input"
-              placeholder="professor ou professor@email.com"
+              placeholder="O teu username ou email"
               required
               autoFocus
             />

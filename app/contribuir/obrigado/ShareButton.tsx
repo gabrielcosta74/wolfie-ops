@@ -2,6 +2,10 @@
 
 export function ShareButton() {
   async function handleShare() {
+    if (typeof window === "undefined" || typeof navigator === "undefined") {
+      return;
+    }
+
     const url = window.location.origin + "/contribuir";
     const shareData = {
       title: "Wolfi — Contribuir",
@@ -15,9 +19,11 @@ export function ShareButton() {
       } catch {
         // cancelled — fine
       }
-    } else {
+    } else if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url);
       alert("Link copiado!");
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   }
 

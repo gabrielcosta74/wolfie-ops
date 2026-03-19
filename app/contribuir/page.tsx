@@ -105,7 +105,7 @@ export default async function ContribuirPage() {
             </div>
             
             <a 
-              href="https://instagram.com/wolfipt" 
+              href="https://instagram.com/wolfi.pt" 
               target="_blank" 
               rel="noopener noreferrer"
               className="px-6 py-3 shrink-0 bg-white text-black text-sm font-bold rounded-full hover:scale-105 active:scale-95 transition-transform flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.15)]"

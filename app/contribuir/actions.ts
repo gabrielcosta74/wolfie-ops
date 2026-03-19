@@ -1,7 +1,7 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   checkRateLimitPersisted,
@@ -80,11 +80,14 @@ function slugifyFilename(name: string) {
   );
 }
 
-export async function submitContribution(formData: FormData): Promise<{ error: string } | never> {
+export async function submitContribution(
+  _prevState: { error: string; success: boolean },
+  formData: FormData,
+): Promise<{ error: string; success: boolean } | never> {
   try {
     await requireTrustedOriginForAction();
   } catch {
-    return { error: "Pedido inválido. Atualiza a página e tenta novamente." };
+    return { error: "Pedido inválido. Atualiza a página e tenta novamente.", success: false };
   }
 
   const headerStore = await headers();
@@ -99,18 +102,18 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
   });
 
   if (!rateLimit.ok) {
-    return { error: "Muitos envios num curto espaço de tempo. Tenta novamente daqui a pouco." };
+    return { error: "Muitos envios num curto espaço de tempo. Tenta novamente daqui a pouco.", success: false };
   }
 
   const honeypot = ((formData.get("website") as string | null) ?? "").trim();
   if (honeypot) {
-    return { error: "Pedido inválido." };
+    return { error: "Pedido inválido.", success: false };
   }
 
   const startedAtRaw = (formData.get("started_at") as string | null) ?? "";
   const startedAt = Number.parseInt(startedAtRaw, 10);
   if (!Number.isFinite(startedAt) || Date.now() - startedAt < 2500) {
-    return { error: "Envio demasiado rápido. Revê o formulário e tenta novamente." };
+    return { error: "Envio demasiado rápido. Revê o formulário e tenta novamente.", success: false };
   }
 
   const input: SubmissionInput = {
@@ -131,15 +134,15 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
     .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
   if (!input.type || !input.title.trim()) {
-    return { error: "Preenche o tipo e o titulo antes de enviar." };
+    return { error: "Preenche o tipo e o titulo antes de enviar.", success: false };
   }
 
   if (!input.url.trim() && !input.content.trim() && files.length === 0) {
-    return { error: "Adiciona um link, um ficheiro ou uma descricao curta." };
+    return { error: "Adiciona um link, um ficheiro ou uma descricao curta.", success: false };
   }
 
   if (files.length > CONTRIBUTION_MAX_FILES) {
-    return { error: `Podes enviar ate ${CONTRIBUTION_MAX_FILES} ficheiros de cada vez.` };
+    return { error: `Podes enviar ate ${CONTRIBUTION_MAX_FILES} ficheiros de cada vez.`, success: false };
   }
 
   let totalSize = 0;
@@ -149,17 +152,19 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
     if (file.size > CONTRIBUTION_MAX_FILE_SIZE_BYTES) {
       return {
         error: `${file.name} ultrapassa o limite de ${formatContributionBytes(CONTRIBUTION_MAX_FILE_SIZE_BYTES)}.`,
+        success: false,
       };
     }
 
     if (!isAllowedContributionFileType(file.type, file.name)) {
-      return { error: `${file.name} nao tem um formato suportado.` };
+      return { error: `${file.name} nao tem um formato suportado.`, success: false };
     }
   }
 
   if (totalSize > CONTRIBUTION_MAX_TOTAL_SIZE_BYTES) {
     return {
       error: `O total dos anexos nao pode ultrapassar ${formatContributionBytes(CONTRIBUTION_MAX_TOTAL_SIZE_BYTES)}.`,
+      success: false,
     };
   }
 
@@ -173,7 +178,7 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
       await ensureAttachmentBucket();
     } catch (error) {
       console.error("Failed to ensure attachment bucket:", error);
-      return { error: "Nao foi possivel preparar o upload dos ficheiros. Tenta novamente." };
+      return { error: "Nao foi possivel preparar o upload dos ficheiros. Tenta novamente.", success: false };
     }
 
     for (const file of files) {
@@ -195,7 +200,7 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
           await supabase.storage.from(CONTRIBUTION_ATTACHMENT_BUCKET).remove(uploadedPaths);
         }
 
-        return { error: `Nao foi possivel enviar ${file.name}. Tenta novamente.` };
+        return { error: `Nao foi possivel enviar ${file.name}. Tenta novamente.`, success: false };
       }
 
       uploadedPaths.push(filePath);
@@ -234,7 +239,7 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
       await supabase.storage.from(CONTRIBUTION_ATTACHMENT_BUCKET).remove(uploadedPaths);
     }
 
-    return { error: "Ocorreu um erro ao enviar. Tenta novamente." };
+    return { error: "Ocorreu um erro ao enviar. Tenta novamente.", success: false };
   }
 
   const { error: notificationError } = await supabase.from("ops_notifications").insert({
@@ -256,5 +261,6 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
     console.error("Failed to create ops notification:", notificationError);
   }
 
+  // Use native Next.js Server Action redirect
   redirect("/contribuir/obrigado");
 }

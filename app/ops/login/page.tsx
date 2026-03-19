@@ -65,7 +65,7 @@ function LoginForm() {
             <input
               name="identifier"
               type="text"
-              placeholder="gabriel ou admin@wolfie.pt"
+              placeholder="O teu username ou email"
               autoFocus
               required
               style={{

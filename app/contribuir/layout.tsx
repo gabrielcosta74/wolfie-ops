@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import "./contribuir.css";
 
 export const metadata: Metadata = {
-  title: "Contribui para o Wolfi",
-  description:
-    "Partilha vídeos, resumos, exercícios e recursos úteis para ajudar outros alunos a prepararem-se para o exame.",
+  title: "Wolfi | Contribuir",
+  description: "Junta-te à comunidade Wolfi e partilha materiais de estudo.",
 };
 
 export default function ContribuirLayout({

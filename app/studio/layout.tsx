@@ -5,8 +5,8 @@ import { StudioNav } from "./StudioNav";
 import "./studio.css";
 
 export const metadata: Metadata = {
-  title: "Wolfi Studio | Portal do Professor",
-  description: "Portal de revisão para professores validarem e melhorarem o banco de perguntas do Wolfi.",
+  title: "Wolfi Studio",
+  description: "Portal do Professor para curadoria e validação académica do Wolfi.",
 };
 
 export default async function StudioLayout({ children }: { children: React.ReactNode }) {

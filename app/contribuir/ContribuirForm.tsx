@@ -84,9 +84,8 @@ export function ContribuirForm({
   const startedAtRef = useRef(Date.now());
 
   const [state, formAction, isPending] = useActionState(
-    async (_prev: { error: string } | null, fd: FormData) =>
-      submitContribution(fd),
-    null
+    submitContribution,
+    { error: "", success: false }
   );
 
   const activeType = TYPE_OPTIONS.find((t) => t.value === selectedType)!;
@@ -115,7 +114,7 @@ export function ContribuirForm({
   };
 
   return (
-    <form action={formAction} encType="multipart/form-data" noValidate className="w-full relative">
+    <form action={formAction} noValidate className="w-full relative">
       {/* hidden fields synced with state */}
       <input type="hidden" name="type" value={selectedType} />
       <input type="hidden" name="suggestion" value={selectedSuggestion} />
@@ -389,7 +388,7 @@ export function ContribuirForm({
 }
 
 function normalize(s: string) {
-  return s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 function SchoolCombobox({

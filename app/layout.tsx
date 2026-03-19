@@ -3,8 +3,8 @@ import { AdminShell } from "./AdminShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Wolfi Ops | Monitorização e Cobertura",
-  description: "Painel interno para acompanhar monitorização oficial, cobertura curricular e revisões semanais do Wolfi.",
+  title: "Wolfi Ops",
+  description: "Painel interno de operações e gestão do Wolfi.",
   icons: {
     icon: "/wolf-mascot.png",
     shortcut: "/wolf-mascot.png",
