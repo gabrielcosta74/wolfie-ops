@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { loginManager } from "@/lib/login-actions";
 
-export default function OpsLoginPage() {
+function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginManager, { error: "" });
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "";
@@ -114,5 +114,13 @@ export default function OpsLoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function OpsLoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
