@@ -1,6 +1,8 @@
 "use server";
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireManagerUser } from "@/lib/ops-auth";
+import { requireTrustedOriginForAction } from "@/lib/request-security";
 import { revalidatePath } from "next/cache";
 
 export async function updateExamQuestion(
@@ -18,6 +20,8 @@ export async function updateExamQuestion(
     question_type: string;
   }
 ) {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
 
   const { error } = await supabase

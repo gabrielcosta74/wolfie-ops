@@ -2,6 +2,11 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { PREMIUM_PRICE_EUR, COST_PER_CALL_EUR } from "@/lib/pricing-constants";
 import { Users, Crown, User, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import {
+  calculateAfterTaxProfit,
+  calculateSubscriptionUnitEconomics,
+  CONSERVATIVE_PREMIUM_CHANNEL_KEY,
+} from "@/lib/subscription-economics";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +40,10 @@ async function getUserEconomicsData() {
 
   // Aggregate ledger by user
   const { MODEL_PRICING_EUR } = await import("@/lib/pricing-constants");
+  const premiumRevenueUnit = calculateSubscriptionUnitEconomics(
+    PREMIUM_PRICE_EUR,
+    CONSERVATIVE_PREMIUM_CHANNEL_KEY,
+  );
 
   const ledgerByUser = new Map<string, { totalCalls: number; totalCost: number; byAction: Record<string, number> }>();
   for (const entry of (ledger || [])) {
@@ -91,9 +100,12 @@ async function getUserEconomicsData() {
     const doubtData = doubtsByUser.get(userId);
 
     const plan = wallet?.plan_code || "free";
-    const revenue = plan === "premium" ? PREMIUM_PRICE_EUR : 0;
+    const grossRevenue = plan === "premium" ? PREMIUM_PRICE_EUR : 0;
+    const revenue =
+      plan === "premium" ? premiumRevenueUnit.platformProceedsPreTaxEur : 0;
     const aiCost = ledgerData?.totalCost || 0;
-    const margin = revenue - aiCost;
+    const pretaxMargin = revenue - aiCost;
+    const afterTaxMargin = calculateAfterTaxProfit(pretaxMargin).afterTaxProfitEur;
 
     return {
       userId,
@@ -106,8 +118,10 @@ async function getUserEconomicsData() {
       monthlyQuota: wallet?.monthly_quota_tokens || 0,
       aiCalls: ledgerData?.totalCalls || 0,
       aiCostEur: aiCost,
+      grossRevenueEur: grossRevenue,
       revenueEur: revenue,
-      marginEur: margin,
+      marginEur: pretaxMargin,
+      afterTaxMarginEur: afterTaxMargin,
       sessions: sessionCount,
       doubts: doubtData?.count || 0,
       lastActivity: profile?.last_activity || wallet?.updated_at || null,
@@ -140,7 +154,7 @@ export default async function PerUserEconomicsPage() {
           👤 Per-User Economics
         </h1>
         <p style={{ fontSize: "1rem", color: "var(--muted)" }}>
-          Custo e revenue por utilizador — quem gasta mais, quem é rentável.
+          Custo e receita líquida por utilizador, já com desconto conservador de IVA e store fee nas subscrições premium.
         </p>
       </header>
 
@@ -168,8 +182,9 @@ export default async function PerUserEconomicsPage() {
                 <th style={{ textAlign: "right" }}>Dúvidas IA</th>
                 <th style={{ textAlign: "right" }}>🧠 Lifetime</th>
                 <th style={{ textAlign: "right" }}>Custo IA €</th>
-                <th style={{ textAlign: "right" }}>Revenue €</th>
-                <th style={{ textAlign: "right" }}>Margem €</th>
+                <th style={{ textAlign: "right" }}>Revenue Líq. €</th>
+                <th style={{ textAlign: "right" }}>Margem Pré-Imp. €</th>
+                <th style={{ textAlign: "right" }}>Margem Pós-Imp. €</th>
               </tr>
             </thead>
             <tbody>
@@ -194,7 +209,16 @@ export default async function PerUserEconomicsPage() {
                   <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{u.doubts}</td>
                   <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{u.lifetimeTokens}</td>
                   <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--warning)" }}>{eur(u.aiCostEur)}</td>
-                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--success)" }}>{eur(u.revenueEur)}</td>
+                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--success)" }}>
+                    <div style={{ display: "grid", gap: 2, justifyItems: "end" }}>
+                      <span>{eur(u.revenueEur)}</span>
+                      {u.plan === "premium" ? (
+                        <span style={{ fontSize: "0.72rem", color: "var(--muted-soft)" }}>
+                          bruto {eur(u.grossRevenueEur)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
                   <td style={{
                     textAlign: "right",
                     fontVariantNumeric: "tabular-nums",
@@ -202,6 +226,14 @@ export default async function PerUserEconomicsPage() {
                     color: u.marginEur >= 0 ? "var(--success)" : "var(--danger)",
                   }}>
                     {eur(u.marginEur)}
+                  </td>
+                  <td style={{
+                    textAlign: "right",
+                    fontVariantNumeric: "tabular-nums",
+                    fontWeight: 600,
+                    color: u.afterTaxMarginEur >= 0 ? "var(--success)" : "var(--danger)",
+                  }}>
+                    {eur(u.afterTaxMarginEur)}
                   </td>
                 </tr>
               ))}

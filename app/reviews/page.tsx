@@ -2,10 +2,12 @@ import { listReviewBriefs } from "@/lib/ops-data";
 import { formatDateTime } from "@/lib/format";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
+import { requireManagerUser } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReviewsHistoryPage() {
+  await requireManagerUser();
   const briefs = await listReviewBriefs();
   const v1Briefs = briefs
     .map((brief) => {

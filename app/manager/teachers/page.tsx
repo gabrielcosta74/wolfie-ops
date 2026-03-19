@@ -43,7 +43,7 @@ export default async function TeacherManagementPage() {
           Professores
         </h1>
         <p style={{ fontSize: "1rem", color: "var(--muted)" }}>
-          Cria logins de professor e gere o acesso ao Wolfie Studio.
+          Cria logins de professor e gere o acesso ao Wolfi Studio.
         </p>
       </header>
 

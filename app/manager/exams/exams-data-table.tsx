@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { X, Save, Eye, Image as ImageIcon, CheckCircle, AlertCircle } from "lucide-react";
+import type { CSSProperties, FormEvent } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { ChevronLeft, ChevronRight, CheckCircle, Eye, Image as ImageIcon, Save } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { updateExamQuestion } from "./actions";
+import styles from "./exams-data-table.module.css";
 
 type ExamQuestion = {
   id: string;
@@ -14,17 +16,21 @@ type ExamQuestion = {
   cotacao: number;
   question_text: string;
   question_type: string;
-  has_image: boolean;
+  has_image: boolean | null;
   image_url: string | null;
   opcao_a: string | null;
   opcao_b: string | null;
   opcao_c: string | null;
   opcao_d: string | null;
   opcao_correta: string | null;
-  grading_rubric: any;
+  grading_rubric: unknown;
   subtopic_id: number | null;
+  topics_covered: string[] | null;
   difficulty_level: string | null;
-  is_optional: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+  is_optional: boolean | null;
+  parent_question_number: string | null;
   edu_subtemas_exame: { nome: string } | null;
 };
 
@@ -68,8 +74,44 @@ export function ExamsDataTable({ questions, totalCount, activeFilters }: Props) 
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const [selected, setSelected] = useState<ExamQuestion | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(questions[0]?.id ?? null);
   const [isSaving, setIsSaving] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+
+  useEffect(() => {
+    if (questions.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+
+    if (!selectedId || !questions.some((question) => question.id === selectedId)) {
+      setSelectedId(questions[0].id);
+    }
+  }, [questions, selectedId]);
+
+  const selectedIndex = questions.findIndex((question) => question.id === selectedId);
+  const selected = selectedIndex >= 0 ? questions[selectedIndex] : null;
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, button, summary")) return;
+      if (!selected || questions.length <= 1) return;
+
+      if (event.key === "ArrowRight" && selectedIndex < questions.length - 1) {
+        event.preventDefault();
+        setSelectedId(questions[selectedIndex + 1].id);
+      }
+
+      if (event.key === "ArrowLeft" && selectedIndex > 0) {
+        event.preventDefault();
+        setSelectedId(questions[selectedIndex - 1].id);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [questions, selected, selectedIndex]);
 
   const buildUrl = (updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -84,407 +126,624 @@ export function ExamsDataTable({ questions, totalCount, activeFilters }: Props) 
     startTransition(() => router.push(buildUrl(updates)));
   };
 
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const goToQuestion = (direction: -1 | 1) => {
+    if (!selected) return;
+    const nextIndex = selectedIndex + direction;
+    if (nextIndex < 0 || nextIndex >= questions.length) return;
+    setSelectedId(questions[nextIndex].id);
+  };
+
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!selected) return;
 
     setIsSaving(true);
-    const fd = new FormData(e.currentTarget);
-    const data = {
-      question_text: fd.get("question_text") as string,
-      opcao_a: fd.get("opcao_a") as string,
-      opcao_b: fd.get("opcao_b") as string,
-      opcao_c: fd.get("opcao_c") as string,
-      opcao_d: fd.get("opcao_d") as string,
-      opcao_correta: fd.get("opcao_correta") as string,
-      cotacao: Number(fd.get("cotacao")),
-      difficulty_level: fd.get("difficulty_level") as string,
-      is_optional: fd.get("is_optional") === "true",
-      question_type: fd.get("question_type") as string,
-    };
+    const formData = new FormData(event.currentTarget);
+    const result = await updateExamQuestion(selected.id, {
+      question_text: String(formData.get("question_text") || ""),
+      opcao_a: String(formData.get("opcao_a") || ""),
+      opcao_b: String(formData.get("opcao_b") || ""),
+      opcao_c: String(formData.get("opcao_c") || ""),
+      opcao_d: String(formData.get("opcao_d") || ""),
+      opcao_correta: String(formData.get("opcao_correta") || ""),
+      cotacao: Number(formData.get("cotacao") || 0),
+      difficulty_level: String(formData.get("difficulty_level") || ""),
+      is_optional: formData.get("is_optional") === "true",
+      question_type: String(formData.get("question_type") || ""),
+    });
 
-    const result = await updateExamQuestion(selected.id, data);
-    if (result.success) {
-      setSelected(null);
-      startTransition(() => router.refresh());
-    } else {
-      alert("Erro ao guardar: " + result.error);
-    }
     setIsSaving(false);
+
+    if (!result.success) {
+      alert(`Erro ao guardar: ${result.error}`);
+      return;
+    }
+
+    startTransition(() => router.refresh());
   };
 
-  const isMultipleChoice = (q: ExamQuestion) => q.question_type === "multiple_choice";
+  const visibleFields = selected
+    ? [
+        { label: "ID", value: selected.id },
+        { label: "exam_year", value: selected.exam_year },
+        { label: "exam_phase", value: selected.exam_phase },
+        { label: "question_number", value: selected.question_number },
+        { label: "cotacao", value: selected.cotacao },
+        { label: "question_text", value: selected.question_text, math: true },
+        { label: "question_type", value: selected.question_type },
+        { label: "has_image", value: selected.has_image },
+        { label: "image_url", value: selected.image_url },
+        { label: "opcao_a", value: selected.opcao_a, math: true },
+        { label: "opcao_b", value: selected.opcao_b, math: true },
+        { label: "opcao_c", value: selected.opcao_c, math: true },
+        { label: "opcao_d", value: selected.opcao_d, math: true },
+        { label: "opcao_correta", value: selected.opcao_correta },
+        { label: "grading_rubric", value: selected.grading_rubric, preformatted: true },
+        { label: "subtopic_id", value: selected.subtopic_id },
+        { label: "topics_covered", value: selected.topics_covered },
+        { label: "difficulty_level", value: selected.difficulty_level },
+        { label: "created_at", value: selected.created_at },
+        { label: "updated_at", value: selected.updated_at },
+        { label: "is_optional", value: selected.is_optional },
+        { label: "parent_question_number", value: selected.parent_question_number },
+        { label: "subtema_nome", value: selected.edu_subtemas_exame?.nome ?? null },
+      ]
+    : [];
+
+  const layoutClassName = `${styles.layout} ${focusMode ? styles.layoutFocus : ""}`;
 
   return (
-    <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-      {/* Main Area */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Filters */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-          <select
-            value={activeFilters.type}
-            onChange={e => navigate({ type: e.target.value })}
-            style={selectStyle}
-          >
-            <option value="">Todos os Tipos</option>
-            {Object.entries(typeLabels).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-
-          <select
-            value={activeFilters.difficulty}
-            onChange={e => navigate({ difficulty: e.target.value })}
-            style={selectStyle}
-          >
-            <option value="">Todas Dificuldades</option>
-            {Object.entries(diffLabels).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-
-          <select
-            value={activeFilters.optional}
-            onChange={e => navigate({ optional: e.target.value })}
-            style={selectStyle}
-          >
-            <option value="">Obrigatória + Opcional</option>
-            <option value="false">Obrigatórias</option>
-            <option value="true">Opcionais</option>
-          </select>
-
-          {Object.values(activeFilters).some(Boolean) && (
-            <button
-              className="button ghost"
-              style={{ fontSize: "0.8rem", padding: "6px 10px" }}
-              onClick={() => navigate({ type: "", difficulty: "", optional: "" })}
-            >
-              Limpar
-            </button>
-          )}
-        </div>
-
-        {/* Table */}
-        <div className="table-wrap" style={{ opacity: isPending ? 0.5 : 1, transition: "opacity 0.2s" }}>
-          <table className="ops-table">
-            <thead>
-              <tr>
-                <th style={{ width: 70 }}>#</th>
-                <th>Enunciado</th>
-                <th style={{ width: 130 }}>Tipo</th>
-                <th style={{ width: 80, textAlign: "center" }}>Cotação</th>
-                <th style={{ width: 100 }}>Dificuldade</th>
-                <th style={{ width: 60, textAlign: "center" }}>Img</th>
-                <th style={{ width: 60, textAlign: "center" }}>Opc.</th>
-                <th style={{ width: 40 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {questions.map((q) => {
-                const isActive = selected?.id === q.id;
-                return (
-                  <tr
-                    key={q.id}
-                    className="inbox-row-hover"
-                    style={{ cursor: "pointer", background: isActive ? "var(--surface-strong)" : undefined }}
-                    onClick={() => setSelected(q)}
-                  >
-                    <td>
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>Q{q.question_number}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontSize: "0.9rem", fontWeight: 500, lineHeight: 1.5 }}>
-                        <MathText text={q.question_text} />
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`badge ${typeBadgeColors[q.question_type] || "neutral"}`}>
-                        {typeLabels[q.question_type] || q.question_type}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{q.cotacao}</span>
-                      <span style={{ color: "var(--muted-soft)", fontSize: "0.75rem" }}> pts</span>
-                    </td>
-                    <td>
-                      <span className={`badge ${diffBadgeColors[q.difficulty_level || ""] || "neutral"}`}>
-                        {diffLabels[q.difficulty_level || ""] || q.difficulty_level || "—"}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      {q.has_image ? (
-                        <ImageIcon size={16} style={{ color: "var(--info)" }} />
-                      ) : (
-                        <span style={{ color: "var(--muted-soft)", fontSize: "0.8rem" }}>—</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      {q.is_optional ? (
-                        <span style={{ color: "var(--warning)", fontSize: "0.75rem", fontWeight: 600 }}>Opc</span>
-                      ) : (
-                        <CheckCircle size={14} style={{ color: "var(--success)" }} />
-                      )}
-                    </td>
-                    <td>
-                      <Eye size={14} style={{ color: "var(--muted-soft)" }} />
-                    </td>
-                  </tr>
-                );
-              })}
-              {questions.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: 48, color: "var(--muted)" }}>
-                    Nenhuma questão encontrada com os filtros atuais.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ padding: "12px 0", fontSize: "0.85rem", color: "var(--muted)" }}>
-          {totalCount} questão(ões) no total
-        </div>
-      </div>
-
-      {/* Slide-over Editor */}
-      {selected && (
-        <div
-          className="panel pad"
-          style={{
-            width: 440,
-            position: "sticky",
-            top: 24,
-            maxHeight: "calc(100vh - 48px - 64px - 48px)",
-            overflowY: "auto",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 600 }}>
-              Q{selected.question_number} — {selected.exam_year} {selected.exam_phase}ª Fase
-            </h3>
-            <button className="icon-btn" onClick={() => setSelected(null)}>
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Math Preview */}
-          <div style={{ padding: 16, background: "var(--bg-subtle)", borderRadius: 10, border: "1px solid var(--line)", marginBottom: 16 }}>
-            <span style={labelStyle}>Preview</span>
-            <div style={{ fontSize: "0.95rem", lineHeight: 1.7, marginBottom: isMultipleChoice(selected) ? 12 : 0 }}>
-              <MathText text={selected.question_text} />
-            </div>
-
-            {/* Options preview for multiple choice */}
-            {isMultipleChoice(selected) && (
-              <div style={{ display: "grid", gap: 6 }}>
-                {["A", "B", "C", "D"].map(letter => {
-                  const val = selected[`opcao_${letter.toLowerCase()}` as keyof ExamQuestion] as string;
-                  if (!val) return null;
-                  const isCorrect = selected.opcao_correta?.trim() === letter;
-                  return (
-                    <div key={letter} style={{
-                      display: "flex", gap: 8, alignItems: "center", padding: "6px 10px", borderRadius: 6,
-                      background: isCorrect ? "var(--success-transparent)" : "transparent",
-                      border: isCorrect ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid transparent",
-                    }}>
-                      <span style={{ fontWeight: 700, fontSize: "0.8rem", color: isCorrect ? "var(--success)" : "var(--muted-soft)", width: 16 }}>{letter}</span>
-                      <MathText text={val} style={{ fontSize: "0.85rem" }} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Image preview */}
-          {selected.has_image && selected.image_url && (
-            <div style={{ marginBottom: 16 }}>
-              <span style={labelStyle}>Imagem da Questão</span>
-              <img
-                src={selected.image_url}
-                alt={`Q${selected.question_number}`}
-                style={{ width: "100%", borderRadius: 8, border: "1px solid var(--line)" }}
-              />
-            </div>
-          )}
-
-          {/* Meta info */}
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-            <span className={`badge ${typeBadgeColors[selected.question_type] || "neutral"}`}>
-              {typeLabels[selected.question_type] || selected.question_type}
-            </span>
-            <span className={`badge ${diffBadgeColors[selected.difficulty_level || ""] || "neutral"}`}>
-              {diffLabels[selected.difficulty_level || ""] || "?"}
-            </span>
-            <span className="badge neutral">{selected.cotacao} pts</span>
-            {selected.is_optional && <span className="badge warning">Opcional</span>}
-            {selected.edu_subtemas_exame && (
-              <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{selected.edu_subtemas_exame.nome}</span>
-            )}
-          </div>
-
-          {/* Rubric preview */}
-          {selected.grading_rubric && (
-            <div style={{ marginBottom: 16 }}>
-              <span style={labelStyle}>Critérios de Correção</span>
-              <div style={{ padding: 12, background: "var(--surface-raised)", borderRadius: 8, fontSize: "0.8rem", maxHeight: 140, overflowY: "auto" }}>
-                <RubricDisplay rubric={selected.grading_rubric} />
-              </div>
-            </div>
-          )}
-
-          {/* Edit Form */}
-          <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className={layoutClassName}>
+      {!focusMode && (
+        <aside className={`panel pad ${styles.sidebar}`}>
+          <div className={styles.sidebarHeader}>
             <div>
-              <label style={labelStyle}>Enunciado</label>
-              <textarea
-                name="question_text"
-                key={selected.id + "_qt"}
-                defaultValue={selected.question_text}
-                rows={4}
-                style={inputStyle}
-              />
+              <div className={styles.viewerKicker}>Índice do Exame</div>
+              <h2 style={{ margin: "6px 0 0", fontSize: "1.35rem", letterSpacing: "-0.03em" }}>Perguntas</h2>
             </div>
 
-            {isMultipleChoice(selected) && (
-              <div style={{ display: "grid", gap: 10 }}>
-                <label style={labelStyle}>Opções</label>
-                {["A", "B", "C", "D"].map(letter => {
-                  const isCorrect = selected.opcao_correta?.trim() === letter;
-                  return (
-                    <div key={letter} style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, width: 40 }}>
-                        <input type="radio" name="opcao_correta" value={letter} defaultChecked={isCorrect} id={`ex_opt_${letter}`} style={{ accentColor: "var(--accent)" }} />
-                        <label htmlFor={`ex_opt_${letter}`} style={{ fontWeight: 600, fontSize: "0.85rem" }}>{letter}</label>
-                      </div>
-                      <input
-                        type="text"
-                        name={`opcao_${letter.toLowerCase()}`}
-                        key={selected.id + `_${letter}`}
-                        defaultValue={(selected[`opcao_${letter.toLowerCase()}` as keyof ExamQuestion] as string) || ""}
-                        style={{ ...inputStyle, padding: "8px 10px", flex: 1, borderColor: isCorrect ? "var(--success)" : "var(--line)" }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <div className={styles.filters}>
+              <select
+                value={activeFilters.type}
+                onChange={(event) => navigate({ type: event.target.value })}
+                style={selectStyle}
+              >
+                <option value="">Todos os Tipos</option>
+                {Object.entries(typeLabels).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Cotação</label>
-                <input type="number" name="cotacao" key={selected.id + "_c"} defaultValue={selected.cotacao} min={0} style={{ ...inputStyle, padding: "8px 10px" }} />
-              </div>
-              <div>
-                <label style={labelStyle}>Tipo</label>
-                <select name="question_type" key={selected.id + "_t"} defaultValue={selected.question_type} style={{ ...inputStyle, padding: "8px 10px" }}>
-                  {Object.entries(typeLabels).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={activeFilters.difficulty}
+                onChange={(event) => navigate({ difficulty: event.target.value })}
+                style={selectStyle}
+              >
+                <option value="">Todas Dificuldades</option>
+                {Object.entries(diffLabels).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={activeFilters.optional}
+                onChange={(event) => navigate({ optional: event.target.value })}
+                style={selectStyle}
+              >
+                <option value="">Obrigatória + Opcional</option>
+                <option value="false">Obrigatórias</option>
+                <option value="true">Opcionais</option>
+              </select>
+
+              {Object.values(activeFilters).some(Boolean) && (
+                <button className="button ghost" onClick={() => navigate({ type: "", difficulty: "", optional: "" })}>
+                  Limpar filtros
+                </button>
+              )}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Dificuldade</label>
-                <select name="difficulty_level" key={selected.id + "_d"} defaultValue={selected.difficulty_level || ""} style={{ ...inputStyle, padding: "8px 10px" }}>
-                  {Object.entries(diffLabels).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Opcional?</label>
-                <select name="is_optional" key={selected.id + "_o"} defaultValue={String(selected.is_optional)} style={{ ...inputStyle, padding: "8px 10px" }}>
-                  <option value="false">Obrigatória</option>
-                  <option value="true">Opcional</option>
-                </select>
-              </div>
+            <div className={styles.sidebarMeta}>
+              <span>{totalCount} questão(ões)</span>
+              <span>{selected ? `Selecionada: Q${selected.question_number}` : "Sem seleção"}</span>
+              <span>Setas esquerda/direita para navegar</span>
             </div>
+          </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-              <button type="button" className="button ghost" onClick={() => setSelected(null)}>Cancelar</button>
-              <button type="submit" className="button" style={{ background: "var(--accent)", color: "white" }} disabled={isSaving}>
-                <Save size={15} /> {isSaving ? "A guardar..." : "Guardar"}
-              </button>
-            </div>
-          </form>
-        </div>
+          <div className={styles.questionList} style={{ opacity: isPending ? 0.55 : 1 }}>
+            {questions.map((question) => {
+              const isActive = question.id === selectedId;
+              return (
+                <button
+                  key={question.id}
+                  type="button"
+                  className={`${styles.questionButton} ${isActive ? styles.questionButtonActive : ""}`}
+                  onClick={() => setSelectedId(question.id)}
+                >
+                  <div className={styles.questionButtonTop}>
+                    <span className={styles.questionNumber}>Q{question.question_number}</span>
+                    <span className="badge neutral">{question.cotacao} pts</span>
+                  </div>
+
+                  <div className={styles.questionBadges}>
+                    <span className={`badge ${typeBadgeColors[question.question_type] || "neutral"}`}>
+                      {typeLabels[question.question_type] || question.question_type}
+                    </span>
+                    <span className={`badge ${diffBadgeColors[question.difficulty_level || ""] || "neutral"}`}>
+                      {diffLabels[question.difficulty_level || ""] || question.difficulty_level || "Sem nível"}
+                    </span>
+                    {question.is_optional ? <span className="badge warning">Opcional</span> : <span className="badge success">Obrigatória</span>}
+                    {question.has_image ? <span className="badge info">Imagem</span> : null}
+                  </div>
+
+                  <div className={styles.questionPreview}>
+                    <MathText text={question.question_text} />
+                  </div>
+                </button>
+              );
+            })}
+
+            {questions.length === 0 ? (
+              <div className={styles.emptyState}>Nenhuma questão encontrada com os filtros atuais.</div>
+            ) : null}
+          </div>
+        </aside>
       )}
+
+      <section className={`panel pad ${styles.viewer}`}>
+        {selected ? (
+          <>
+            <header className={styles.viewerHeader}>
+              <div className={styles.viewerHeaderText}>
+                <div className={styles.viewerKicker}>
+                  Exame {selected.exam_year} · {selected.exam_phase}ª Fase · Pergunta {selected.question_number}
+                </div>
+                <h2 className={styles.viewerTitle}>Viewer de Questão</h2>
+                <p className={styles.viewerSubtitle}>
+                  Visualização completa do registo, com enunciado, opções, critérios, campos da tabela e navegação contínua para revisão administrativa.
+                </p>
+              </div>
+
+              <div className={styles.viewerHeaderActions}>
+                <button className="button ghost" onClick={() => setFocusMode((value) => !value)}>
+                  {focusMode ? "Mostrar índice" : "Modo foco"}
+                </button>
+
+                <div className={styles.navButtons}>
+                  <button
+                    type="button"
+                    className={`button ghost ${styles.navButton}`}
+                    onClick={() => goToQuestion(-1)}
+                    disabled={selectedIndex <= 0}
+                  >
+                    <ChevronLeft size={16} /> Anterior
+                  </button>
+                  <button
+                    type="button"
+                    className={`button ghost ${styles.navButton}`}
+                    onClick={() => goToQuestion(1)}
+                    disabled={selectedIndex >= questions.length - 1}
+                  >
+                    Próxima <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            <div className={styles.viewerBody}>
+              <div className={styles.mainColumn}>
+                <section className={styles.card}>
+                  <div className={styles.cardTitleRow}>
+                    <h3 className={styles.cardTitle}>Enunciado</h3>
+                    <div className={styles.questionBadges}>
+                      <span className={`badge ${typeBadgeColors[selected.question_type] || "neutral"}`}>
+                        {typeLabels[selected.question_type] || selected.question_type}
+                      </span>
+                      <span className={`badge ${diffBadgeColors[selected.difficulty_level || ""] || "neutral"}`}>
+                        {diffLabels[selected.difficulty_level || ""] || selected.difficulty_level || "Sem nível"}
+                      </span>
+                      <span className="badge neutral">{selected.cotacao} pts</span>
+                      {selected.is_optional ? <span className="badge warning">Opcional</span> : <span className="badge success">Obrigatória</span>}
+                    </div>
+                  </div>
+
+                  <div className={styles.statement}>
+                    <MathText text={selected.question_text} />
+                  </div>
+                </section>
+
+                {isMultipleChoice(selected) ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitleRow}>
+                      <h3 className={styles.cardTitle}>Opções</h3>
+                      {selected.opcao_correta ? <span className="badge success">Correta: {selected.opcao_correta}</span> : null}
+                    </div>
+
+                    <div className={styles.optionsList}>
+                      {(["A", "B", "C", "D"] as const).map((letter) => {
+                        const value = selected[`opcao_${letter.toLowerCase()}` as keyof ExamQuestion] as string | null;
+                        if (!value) return null;
+
+                        const isCorrect = selected.opcao_correta?.trim() === letter;
+                        return (
+                          <div key={letter} className={`${styles.optionRow} ${isCorrect ? styles.optionRowCorrect : ""}`}>
+                            <span className={styles.optionLetter}>{letter}</span>
+                            <div className={styles.statement}>
+                              <MathText text={value} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ) : null}
+
+                {selected.has_image && selected.image_url ? (
+                  <section className={styles.card}>
+                    <div className={styles.cardTitleRow}>
+                      <h3 className={styles.cardTitle}>Imagem Associada</h3>
+                      <a className="badge info" href={selected.image_url} target="_blank" rel="noreferrer">
+                        Abrir URL
+                      </a>
+                    </div>
+                    <div className={styles.imageFrame}>
+                      <img className={styles.image} src={selected.image_url} alt={`Questão ${selected.question_number}`} />
+                    </div>
+                  </section>
+                ) : null}
+
+                <section className={styles.card}>
+                  <div className={styles.cardTitleRow}>
+                    <h3 className={styles.cardTitle}>Critérios de Correção</h3>
+                    <span className="badge neutral">JSONB renderizado</span>
+                  </div>
+                  <RubricDisplay rubric={selected.grading_rubric} />
+                </section>
+
+                <section className={styles.card}>
+                  <div className={styles.cardTitleRow}>
+                    <h3 className={styles.cardTitle}>Campos da Tabela</h3>
+                    <span className="badge neutral">`exame_nacional_questions`</span>
+                  </div>
+
+                  <div className={styles.rawFields}>
+                    {visibleFields.map((field) => (
+                      <div key={field.label} className={styles.fieldRow}>
+                        <span className={styles.infoLabel}>{field.label}</span>
+                        <div className={styles.fieldValue}>
+                          <FieldValue value={field.value} math={field.math} preformatted={field.preformatted} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+
+              <aside className={styles.sideColumn}>
+                <section className={styles.card}>
+                  <div className={styles.cardTitleRow}>
+                    <h3 className={styles.cardTitle}>Resumo Rápido</h3>
+                    <span className="badge neutral">
+                      {selectedIndex + 1}/{questions.length}
+                    </span>
+                  </div>
+
+                  <div className={styles.infoGrid}>
+                    <InfoTile label="Questão" value={`Q${selected.question_number}`} />
+                    <InfoTile label="Subtema ID" value={selected.subtopic_id} />
+                    <InfoTile label="Subtema" value={selected.edu_subtemas_exame?.nome ?? "—"} />
+                    <InfoTile label="Parent" value={selected.parent_question_number ?? "—"} />
+                    <InfoTile label="Imagem" value={selected.has_image ? "Sim" : "Não"} />
+                    <InfoTile label="Atualizado" value={formatDateTime(selected.updated_at)} />
+                  </div>
+                </section>
+
+                <section className={styles.card}>
+                  <div className={styles.cardTitleRow}>
+                    <h3 className={styles.cardTitle}>Tópicos Cobertos</h3>
+                    <span className="badge neutral">
+                      {selected.topics_covered?.length ?? 0}
+                    </span>
+                  </div>
+
+                  {selected.topics_covered?.length ? (
+                    <div className={styles.topics}>
+                      {selected.topics_covered.map((topic) => (
+                        <span key={topic} className="badge accent">
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.infoValue}>Sem tópicos listados neste registo.</div>
+                  )}
+                </section>
+
+                <details className={styles.editorDetails}>
+                  <summary className={styles.editorSummary}>
+                    Edição rápida
+                    <span className="badge neutral">Admin</span>
+                  </summary>
+
+                  <form key={selected.id} className={styles.editorForm} onSubmit={handleSave}>
+                    <div>
+                      <label className={styles.fieldLabel}>Enunciado</label>
+                      <textarea name="question_text" defaultValue={selected.question_text} rows={6} style={inputStyle} />
+                    </div>
+
+                    {isMultipleChoice(selected) ? (
+                      <div style={{ display: "grid", gap: 10 }}>
+                        <label className={styles.fieldLabel}>Opções</label>
+                        {(["A", "B", "C", "D"] as const).map((letter) => {
+                          const isCorrect = selected.opcao_correta?.trim() === letter;
+                          const optionValue = selected[`opcao_${letter.toLowerCase()}` as keyof ExamQuestion] as string | null;
+                          return (
+                            <div key={letter} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div style={{ width: 48, display: "flex", alignItems: "center", gap: 4 }}>
+                                <input
+                                  id={`${selected.id}-${letter}`}
+                                  type="radio"
+                                  name="opcao_correta"
+                                  value={letter}
+                                  defaultChecked={isCorrect}
+                                  style={{ accentColor: "var(--accent)" }}
+                                />
+                                <label htmlFor={`${selected.id}-${letter}`} style={{ fontWeight: 700 }}>
+                                  {letter}
+                                </label>
+                              </div>
+                              <input
+                                type="text"
+                                name={`opcao_${letter.toLowerCase()}`}
+                                defaultValue={optionValue ?? ""}
+                                style={{
+                                  ...inputStyle,
+                                  borderColor: isCorrect ? "rgba(16, 185, 129, 0.45)" : "var(--line)",
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+
+                    <div className={styles.formGrid}>
+                      <div>
+                        <label className={styles.fieldLabel}>Cotação</label>
+                        <input type="number" min={0} name="cotacao" defaultValue={selected.cotacao} style={inputStyle} />
+                      </div>
+                      <div>
+                        <label className={styles.fieldLabel}>Tipo</label>
+                        <select name="question_type" defaultValue={selected.question_type} style={selectStyle}>
+                          {Object.entries(typeLabels).map(([key, label]) => (
+                            <option key={key} value={key}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className={styles.formGrid}>
+                      <div>
+                        <label className={styles.fieldLabel}>Dificuldade</label>
+                        <select name="difficulty_level" defaultValue={selected.difficulty_level || ""} style={selectStyle}>
+                          {Object.entries(diffLabels).map(([key, label]) => (
+                            <option key={key} value={key}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={styles.fieldLabel}>Opcional?</label>
+                        <select name="is_optional" defaultValue={String(Boolean(selected.is_optional))} style={selectStyle}>
+                          <option value="false">Obrigatória</option>
+                          <option value="true">Opcional</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <button type="submit" className="button" style={{ background: "var(--accent)", color: "white" }} disabled={isSaving}>
+                        <Save size={15} /> {isSaving ? "A guardar..." : "Guardar alterações"}
+                      </button>
+                    </div>
+                  </form>
+                </details>
+              </aside>
+            </div>
+
+            <footer className={styles.footerRow}>
+              <span>ID atual: {selected.id}</span>
+              <span>
+                Criado em {formatDateTime(selected.created_at)} · Atualizado em {formatDateTime(selected.updated_at)}
+              </span>
+            </footer>
+          </>
+        ) : (
+          <div className={styles.emptyState}>Sem questões para mostrar.</div>
+        )}
+      </section>
     </div>
   );
 }
 
-/** Renders a JSONB grading rubric in a readable way */
-function RubricDisplay({ rubric }: { rubric: any }) {
-  if (!rubric) return <span style={{ color: "var(--muted)" }}>Sem critérios</span>;
+function RubricDisplay({ rubric }: { rubric: unknown }) {
+  if (rubric == null) {
+    return <div className={styles.infoValue}>Sem critérios definidos.</div>;
+  }
 
-  // Handle array rubric (step-by-step)
   if (Array.isArray(rubric)) {
     return (
-      <div style={{ display: "grid", gap: 6 }}>
-        {rubric.map((step: any, i: number) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-            <span style={{ color: "var(--text)" }}>{step.description || step.step || `Passo ${i + 1}`}</span>
-            {step.points != null && (
-              <span style={{ fontWeight: 700, color: "var(--accent)", flexShrink: 0 }}>{step.points}pt</span>
-            )}
-          </div>
-        ))}
+      <div className={styles.rubricGroup}>
+        <section className={styles.rubricSection}>
+          <div className={styles.rubricSectionTitle}>Itens</div>
+          <ol className={styles.rubricList}>
+            {rubric.map((item, index) => (
+              <li key={index}>
+                <FieldValue value={item} math />
+              </li>
+            ))}
+          </ol>
+        </section>
       </div>
     );
   }
 
-  // Handle object rubric
   if (typeof rubric === "object") {
-    const entries = Object.entries(rubric);
-    if (entries.length === 0) return <span style={{ color: "var(--muted)" }}>Vazio</span>;
+    const entries = Object.entries(rubric as Record<string, unknown>);
+    if (entries.length === 0) {
+      return <div className={styles.infoValue}>Critérios vazios.</div>;
+    }
+
     return (
-      <div style={{ display: "grid", gap: 6 }}>
-        {entries.map(([key, val]) => (
-          <div key={key} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-            <span style={{ color: "var(--text)" }}>{key}</span>
-            <span style={{ color: "var(--muted)", flexShrink: 0 }}>{typeof val === "object" ? JSON.stringify(val) : String(val)}</span>
-          </div>
+      <div className={styles.rubricGroup}>
+        {entries.map(([key, value]) => (
+          <section key={key} className={styles.rubricSection}>
+            <div className={styles.rubricSectionTitle}>{humanizeKey(key)}</div>
+            {Array.isArray(value) ? (
+              value.length ? (
+                <ol className={styles.rubricList}>
+                  {value.map((item, index) => (
+                    <li key={index}>
+                      <FieldValue value={item} math />
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className={styles.infoValue}>Sem itens.</div>
+              )
+            ) : (
+              <div className={styles.infoValue}>
+                <FieldValue value={value} math />
+              </div>
+            )}
+          </section>
         ))}
       </div>
     );
   }
 
-  return <span>{String(rubric)}</span>;
+  return <div className={styles.infoValue}><FieldValue value={rubric} math /></div>;
 }
 
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "0.75rem",
-  fontWeight: 600,
-  color: "var(--muted-soft)",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  marginBottom: 6,
-};
+function InfoTile({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div className={styles.infoTile}>
+      <span className={styles.infoLabel}>{label}</span>
+      <div className={styles.infoValue}>
+        <FieldValue value={value} />
+      </div>
+    </div>
+  );
+}
 
-const inputStyle: React.CSSProperties = {
+function FieldValue({
+  value,
+  math = false,
+  preformatted = false,
+}: {
+  value: unknown;
+  math?: boolean;
+  preformatted?: boolean;
+}) {
+  if (value == null || value === "") {
+    return <span className={styles.emptyValue}>—</span>;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return <span className={styles.emptyValue}>[]</span>;
+    }
+
+    return (
+      <div className={styles.topics}>
+        {value.map((item, index) => (
+          <span key={`${String(item)}-${index}`} className="badge neutral">
+            {String(item)}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  if (typeof value === "boolean") {
+    return <span className={`badge ${value ? "success" : "neutral"}`}>{value ? "Sim" : "Não"}</span>;
+  }
+
+  if (typeof value === "object") {
+    return <pre className={styles.preBlock}>{JSON.stringify(value, null, 2)}</pre>;
+  }
+
+  const stringValue = String(value);
+  if (preformatted) {
+    return <pre className={styles.preBlock}>{stringValue}</pre>;
+  }
+
+  if (stringValue.startsWith("http://") || stringValue.startsWith("https://")) {
+    return (
+      <a href={stringValue} target="_blank" rel="noreferrer">
+        {stringValue}
+      </a>
+    );
+  }
+
+  if (looksLikeTimestamp(stringValue)) {
+    return <span>{formatDateTime(stringValue)}</span>;
+  }
+
+  if (math) {
+    return <MathText text={stringValue} />;
+  }
+
+  return <span>{stringValue}</span>;
+}
+
+function isMultipleChoice(question: ExamQuestion) {
+  return question.question_type === "multiple_choice";
+}
+
+function humanizeKey(key: string) {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function looksLikeTimestamp(value: string) {
+  return /^\d{4}-\d{2}-\d{2}[ T]/.test(value);
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("pt-PT", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+}
+
+const inputStyle: CSSProperties = {
   width: "100%",
   background: "var(--bg-subtle)",
   border: "1px solid var(--line)",
-  padding: 10,
-  borderRadius: 8,
+  padding: "10px 12px",
+  borderRadius: 10,
   color: "var(--text)",
-  fontSize: "0.85rem",
+  fontSize: "0.92rem",
   resize: "vertical",
 };
 
-const selectStyle: React.CSSProperties = {
+const selectStyle: CSSProperties = {
+  width: "100%",
   background: "var(--surface)",
   border: "1px solid var(--line)",
-  padding: "8px 12px",
-  borderRadius: 8,
+  padding: "10px 12px",
+  borderRadius: 10,
   color: "var(--text)",
-  fontSize: "0.85rem",
+  fontSize: "0.9rem",
 };

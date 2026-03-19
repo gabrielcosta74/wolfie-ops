@@ -10,6 +10,12 @@ export type StudioSession = {
   role: string | null;
 };
 
+const STUDIO_ROLES = new Set(["teacher", "admin"]);
+
+export function isStudioRole(role: string | null | undefined) {
+  return Boolean(role && STUDIO_ROLES.has(role));
+}
+
 export async function getStudioSession(): Promise<StudioSession> {
   const supabase = await getSupabaseServer();
   const {
@@ -54,7 +60,7 @@ export async function requireTeacherUser() {
     redirect("/studio/login");
   }
 
-  if (session.role !== "teacher") {
+  if (!isStudioRole(session.role)) {
     redirect("/studio/unauthorized");
   }
 

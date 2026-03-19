@@ -3,6 +3,11 @@ import { PREMIUM_PRICE_EUR, COST_PER_CALL_EUR, TOTAL_INFRA_MONTHLY_EUR, MODEL_PR
 import { Activity, BookOpen, AlertTriangle, TrendingDown, TrendingUp, Zap, MessageSquare, DollarSign, Server, Users, Calendar } from "lucide-react";
 import { DifficultyDonutChart } from "./DashboardCharts";
 import React from "react";
+import {
+  calculateAfterTaxProfit,
+  calculateSubscriptionUnitEconomics,
+  CONSERVATIVE_PREMIUM_CHANNEL_KEY,
+} from "@/lib/subscription-economics";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +108,12 @@ async function getMasterDashboardData() {
      premiumUsers = counts["premium"] || 0;
   }
   
-  const monthlyRevenue = premiumUsers * PREMIUM_PRICE_EUR;
+  const premiumRevenueUnit = calculateSubscriptionUnitEconomics(
+    PREMIUM_PRICE_EUR,
+    CONSERVATIVE_PREMIUM_CHANNEL_KEY,
+  );
+  const grossMonthlyRevenue = premiumUsers * PREMIUM_PRICE_EUR;
+  const monthlyRevenue = premiumUsers * premiumRevenueUnit.platformProceedsPreTaxEur;
 
   let aiCostsView: any[] = aiCostsViewRes.data || [];
   const aiCostBreakdown = aiCostsView
@@ -135,7 +145,8 @@ async function getMasterDashboardData() {
   const totalUserAiCostEur = aiCostBreakdown.reduce((a, b) => a + b.estimated_cost_eur, 0);
   const totalAiCost = totalUserAiCostEur + totalAgentCostEur + examGradingCost;
   const totalMonthlyCost = totalAiCost + TOTAL_INFRA_MONTHLY_EUR;
-  const netMonthly = monthlyRevenue - totalMonthlyCost;
+  const pretaxNetMonthly = monthlyRevenue - totalMonthlyCost;
+  const netMonthly = calculateAfterTaxProfit(pretaxNetMonthly).afterTaxProfitEur;
 
   return {
     operational: {
@@ -154,6 +165,7 @@ async function getMasterDashboardData() {
     financial: {
       totalUsers: totalUsersRes.count || 0,
       premiumUsers,
+      grossMonthlyRevenue,
       monthlyRevenue,
       totalUserAiCostEur,
       totalAgentCostEur,
@@ -161,6 +173,8 @@ async function getMasterDashboardData() {
       totalAiCost,
       infraCost: TOTAL_INFRA_MONTHLY_EUR,
       totalMonthlyCost,
+      pretaxNetMonthly,
+      premiumRevenueChannelLabel: premiumRevenueUnit.channelLabel,
       netMonthly,
       isProfit: netMonthly >= 0
     }
@@ -253,7 +267,7 @@ export default async function MasterDashboard() {
                 Telemetria Central
               </h1>
               <p style={{ fontSize: "0.95rem", color: "#94a3b8", margin: 0 }}>
-                Saúde Financeira e Operacional do Wolfie em tempo real.
+                Saúde Financeira e Operacional do Wolfi em tempo real.
               </p>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
@@ -272,12 +286,12 @@ export default async function MasterDashboard() {
              {/* Revenue MRR */}
              <div className="panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Faturação (MRR)</span>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>Receita Líq. MRR</span>
                 <DollarSign size={18} color="#34d399" />
               </div>
               <div>
                 <span style={{ fontSize: "2.2rem", fontWeight: 800, color: "#f8fafc" }}>{eur(fin.monthlyRevenue)}</span>
-                <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748b" }}>{fin.premiumUsers} subscritores ativos (+€{PREMIUM_PRICE_EUR})</p>
+                <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748b" }}>{fin.premiumUsers} premium · bruto {eur(fin.grossMonthlyRevenue)} · {fin.premiumRevenueChannelLabel}</p>
               </div>
             </div>
 
@@ -291,7 +305,7 @@ export default async function MasterDashboard() {
                 <span style={{ fontSize: "2.2rem", fontWeight: 800, color: fin.isProfit ? "#10b981" : "#ef4444", textShadow: `0 0 15px ${fin.isProfit ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}` }}>
                   {eur(fin.netMonthly)}
                 </span>
-                <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748b" }}>Queima mensal subtraída da faturação</p>
+                <p style={{ margin: "4px 0 0", fontSize: "0.8rem", color: "#64748b" }}>Após IVA/store fees e imposto estimado</p>
               </div>
             </div>
 

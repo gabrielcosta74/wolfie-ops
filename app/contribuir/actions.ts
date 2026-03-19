@@ -1,7 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  checkRateLimitPersisted,
+  requireTrustedOriginForAction,
+} from "@/lib/request-security";
 import {
   CONTRIBUTION_ATTACHMENT_BUCKET,
   CONTRIBUTION_MAX_FILES,
@@ -24,6 +29,10 @@ interface SubmissionInput {
   title: string;
   type: string;
   url: string;
+}
+
+function normalizeInstagramHandle(value: string) {
+  return value.trim().replace(/^@+/, "").toLowerCase();
 }
 
 async function ensureAttachmentBucket() {
@@ -72,19 +81,51 @@ function slugifyFilename(name: string) {
 }
 
 export async function submitContribution(formData: FormData): Promise<{ error: string } | never> {
+  try {
+    await requireTrustedOriginForAction();
+  } catch {
+    return { error: "Pedido inválido. Atualiza a página e tenta novamente." };
+  }
+
+  const headerStore = await headers();
+  const clientIp =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headerStore.get("x-real-ip")?.trim() ??
+    "unknown";
+  const rateLimit = await checkRateLimitPersisted({
+    key: `contribuir:${clientIp}`,
+    limit: 5,
+    windowMs: 15 * 60 * 1000,
+  });
+
+  if (!rateLimit.ok) {
+    return { error: "Muitos envios num curto espaço de tempo. Tenta novamente daqui a pouco." };
+  }
+
+  const honeypot = ((formData.get("website") as string | null) ?? "").trim();
+  if (honeypot) {
+    return { error: "Pedido inválido." };
+  }
+
+  const startedAtRaw = (formData.get("started_at") as string | null) ?? "";
+  const startedAt = Number.parseInt(startedAtRaw, 10);
+  if (!Number.isFinite(startedAt) || Date.now() - startedAt < 2500) {
+    return { error: "Envio demasiado rápido. Revê o formulário e tenta novamente." };
+  }
+
   const input: SubmissionInput = {
-    content: formData.get("content") as string,
-    email: formData.get("email") as string,
-    escola: formData.get("escola") as string,
-    source_name: formData.get("source_name") as string,
-    subtema_id: formData.get("subtema_id") as string,
-    suggestion: formData.get("suggestion") as string,
-    title: formData.get("title") as string,
-    type: formData.get("type") as string,
-    url: formData.get("url") as string,
+    content: (formData.get("content") as string | null) ?? "",
+    email: (formData.get("email") as string | null) ?? "",
+    escola: (formData.get("escola") as string | null) ?? "",
+    source_name: (formData.get("source_name") as string | null) ?? "",
+    subtema_id: (formData.get("subtema_id") as string | null) ?? "",
+    suggestion: (formData.get("suggestion") as string | null) ?? "",
+    title: (formData.get("title") as string | null) ?? "",
+    type: (formData.get("type") as string | null) ?? "",
+    url: (formData.get("url") as string | null) ?? "",
   };
-  const escolaCustom = (formData.get("escola_custom") as string | null)?.trim() ?? "";
-  const escola = input.escola === "__other__" ? escolaCustom : input.escola.trim();
+  const escola = input.escola.trim();
+  const instagramHandle = normalizeInstagramHandle(input.source_name);
   const files = formData
     .getAll("attachments")
     .filter((entry): entry is File => entry instanceof File && entry.size > 0);
@@ -178,6 +219,7 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
     content: serializedContent,
     email: input.email.trim() || null,
     escola: escola || null,
+    instagram_handle: instagramHandle || null,
     status: "pending",
     subtema_id: subtemaId,
     title: input.title.trim(),
@@ -202,6 +244,7 @@ export async function submitContribution(formData: FormData): Promise<{ error: s
       attachments_count: attachments.length,
       email: input.email.trim() || null,
       has_description: Boolean(input.content.trim()),
+      instagram_handle: instagramHandle || null,
       source_name: input.source_name.trim() || null,
       submission_type: input.type,
       suggestion: input.suggestion.trim() || null,

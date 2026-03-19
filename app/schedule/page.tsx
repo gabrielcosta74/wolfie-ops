@@ -1,4 +1,5 @@
 import { CheckCircle2, Clock, Sparkles, Layers, BarChart3 } from "lucide-react";
+import { requireManagerUser } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ const AGENT_SCHEDULE: ScheduleEntry[] = [
   {
     id: "coverage-profiler",
     name: "Coverage Profiler",
-    description: "Analisa a taxonomia oficial contra o conteúdo do Wolfie para detetar subcobertura, sobrecobertura e baixa variedade.",
+    description: "Analisa a taxonomia oficial contra o conteúdo do Wolfi para detetar subcobertura, sobrecobertura e baixa variedade.",
     frequency: "Todas as semanas (Terça-feira)",
     nextRun: "Próxima terça-feira",
     lastRun: null,
@@ -89,7 +90,8 @@ function StatusDot({ status }: { status: ScheduleEntry["status"] }) {
   );
 }
 
-export default function SchedulePage() {
+export default async function SchedulePage() {
+  await requireManagerUser();
   return (
     <div style={{ padding: 48, maxWidth: 900, margin: "0 auto" }}>
       <header style={{ marginBottom: 48 }}>

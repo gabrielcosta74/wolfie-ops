@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Core Colors (Pure Dark Monochrome + High Contrast) */
   --bg: #09090b;
@@ -73,6 +77,7 @@ body {
   font-family: "Inter", "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 a {

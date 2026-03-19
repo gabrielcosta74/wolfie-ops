@@ -3,27 +3,43 @@ import Link from "next/link";
 import { ShareButton } from "./ShareButton";
 
 export const metadata: Metadata = {
-  title: "Obrigado! | Wolfie Contribuir",
-  description: "A tua sugestão foi recebida. Obrigado por contribuir!",
+  title: "Obrigado! | Wolfi",
+  description: "A tua sugestão foi recebida. Obrigado por contribuir para o Wolfi!",
 };
 
 export default function ObrigadoPage() {
   return (
-    <main className="ct-main">
-      <div className="ct-thankyou">
-        <div className="ct-thankyou-icon">🎉</div>
-        <h1>Obrigado pela tua contribuição!</h1>
-        <p>
-          A tua sugestão foi recebida e será analisada pela equipa Wolfie.
-          Juntos tornamos a preparação para o exame mais acessível.
-        </p>
-        <div className="ct-thankyou-actions">
-          <ShareButton />
-          <Link href="/contribuir" className="ct-btn ct-btn--secondary">
-            Enviar outra sugestão
-          </Link>
+    <>
+      <nav className="ct-nav">
+        <a href="/" className="ct-logo">
+          <div className="ct-logo-w">W</div>
+          Wolfi
+        </a>
+      </nav>
+
+      <section className="ct-zone" style={{ paddingTop: "80px" }}>
+        <div className="ct-wizard">
+          <div className="ct-pane ct-thanks">
+            <div className="ct-thanks-ring">✦</div>
+            <h2>Obrigado pela<br />tua contribuição!</h2>
+            <p>
+              O teu recurso vai ser revisto e pode aparecer na app Wolfi
+              para ajudar outros alunos a estudar melhor.
+            </p>
+            <div className="ct-thanks-actions">
+              <ShareButton />
+              <Link href="/contribuir" className="ct-again-link">
+                Contribuir mais →
+              </Link>
+            </div>
+          </div>
         </div>
-      </div>
-    </main>
+      </section>
+
+      <footer className="ct-footer">
+        © {new Date().getFullYear()} Wolfi AI ·{" "}
+        <a href="/">Voltar ao início</a>
+      </footer>
+    </>
   );
 }

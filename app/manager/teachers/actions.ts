@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireManagerUser } from "@/lib/ops-auth";
+import { requireTrustedOriginForAction } from "@/lib/request-security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { TeacherActionState } from "./state";
 
@@ -50,6 +52,8 @@ export async function createTeacher(
   _prevState: TeacherActionState,
   formData: FormData
 ): Promise<TeacherActionState> {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const email = normalizeEmail(formData.get("email"));
   const password = normalizeText(formData.get("password"));
   const name = normalizeText(formData.get("name"));
@@ -99,6 +103,8 @@ export async function promoteTeacher(
   _prevState: TeacherActionState,
   formData: FormData
 ): Promise<TeacherActionState> {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const email = normalizeEmail(formData.get("email"));
 
   if (!email) {

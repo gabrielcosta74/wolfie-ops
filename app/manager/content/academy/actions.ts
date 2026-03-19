@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireManagerUser } from "@/lib/ops-auth";
+import { requireTrustedOriginForAction } from "@/lib/request-security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 function asText(v: FormDataEntryValue | null): string {
@@ -36,6 +38,8 @@ function revalidateAll() {
 export async function saveResource(
   formData: FormData
 ): Promise<{ success: boolean; error?: string; id?: number }> {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
 
   const id = asText(formData.get("id"));
@@ -145,6 +149,8 @@ export async function saveResource(
 export async function deleteResource(
   id: number
 ): Promise<{ success: boolean; error?: string }> {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
 
   const { data: resource, error: fetchError } = await supabase
@@ -182,6 +188,8 @@ export async function deleteResourceById(
   id: number,
   redirectTo: string
 ): Promise<void> {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
 
   const { error } = await supabase

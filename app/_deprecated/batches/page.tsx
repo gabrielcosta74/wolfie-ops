@@ -3,7 +3,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { getLatestReviewBrief } from "@/lib/ops-data";
 import { AlertCircle, Check, X, Clock } from "lucide-react";
 
-export const metadata = { title: "Caixa de Entrada | Wolfie Ops" };
+export const metadata = { title: "Caixa de Entrada | Wolfi Ops" };
 export const dynamic = "force-dynamic";
 
 export default async function TriageQueuePage() {

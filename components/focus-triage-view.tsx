@@ -485,7 +485,7 @@ export function FocusTriageView({ pkg }: { pkg: TriagePackage }) {
               <strong>Decisão Final</strong>
             </div>
             <p className="description" style={{ margin: "0 0 16px 0" }}>
-              Analisa a proposta concreta gerada pela IA. Se tudo estiver correto, aprova as alterações para entrarem no ecossistema do Wolfie.
+              Analisa a proposta concreta gerada pela IA. Se tudo estiver correto, aprova as alterações para entrarem no ecossistema do Wolfi.
             </p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <button className="action-btn" type="button" disabled style={{ background: "transparent", color: "var(--danger)", border: "1px solid var(--danger)", padding: "8px 16px", borderRadius: 8, fontWeight: 600 }}>

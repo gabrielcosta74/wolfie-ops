@@ -84,7 +84,7 @@ export function ReviewLauncher({ themes, subthemes }: Props) {
         <div>
           <div className="st-review-launcher-title">Como funciona a amostra</div>
           <p className="st-page-subtitle" style={{ marginTop: 6 }}>
-            O Wolfie vai gerar uma seleção curta e variada, misturando níveis de dificuldade e perguntas de estilos
+            O Wolfi vai gerar uma seleção curta e variada, misturando níveis de dificuldade e perguntas de estilos
             diferentes para não te mostrar sempre o mesmo tipo.
           </p>
         </div>

@@ -3,7 +3,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatDateTime } from "@/lib/format";
 import { listCurriculumFindings } from "@/lib/ops-data";
 
-export const metadata = { title: "Radar Curricular | Wolfie Ops" };
+export const metadata = { title: "Radar Curricular | Wolfi Ops" };
 export const dynamic = "force-dynamic";
 
 export default async function RadarPage() {
@@ -19,7 +19,7 @@ export default async function RadarPage() {
       <header className="page-header">
         <h1 className="page-title">Radar Curricular</h1>
         <p className="page-description">
-          Monitorização automática de fontes oficiais de Matemática A e exames. O objetivo aqui é perceber o que mudou e se isso deve gerar atualização no Wolfie.
+          Monitorização automática de fontes oficiais de Matemática A e exames. O objetivo aqui é perceber o que mudou e se isso deve gerar atualização no Wolfi.
         </p>
       </header>
 

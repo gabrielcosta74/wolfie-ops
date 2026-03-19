@@ -1,52 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { getSupabaseBrowser } from "@/lib/supabase-browser";
-import { useRouter } from "next/navigation";
+import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
+import { loginStudio } from "@/lib/login-actions";
 
 export default function StudioLoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    const supabase = getSupabaseBrowser();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (authError) {
-      setError("Email ou password incorretos.");
-      setLoading(false);
-      return;
-    }
-
-    router.push("/studio/teacher");
-    router.refresh();
-  }
+  const [state, formAction, isPending] = useActionState(loginStudio, { error: "" });
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "";
 
   return (
     <div className="st-login-page">
       <div className="st-login-card">
         <h1>Entrar no Studio</h1>
-        <p>Acede ao portal de professores do Wolfie.</p>
+        <p>Acede ao portal de professores do Wolfi.</p>
 
-        <form onSubmit={handleSubmit} className="st-form">
-          {error && <div className="st-feedback error">{error}</div>}
+        <form action={formAction} className="st-form">
+          <input type="hidden" name="next" value={next} />
+          {state.error && <div className="st-feedback error">{state.error}</div>}
 
           <div className="st-field">
-            <label className="st-label st-label-required" htmlFor="st-email">Email</label>
+            <label className="st-label st-label-required" htmlFor="st-identifier">Username ou email</label>
             <input
-              type="email"
-              id="st-email"
+              name="identifier"
+              type="text"
+              id="st-identifier"
               className="st-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="professor@email.com"
+              placeholder="professor ou professor@email.com"
               required
               autoFocus
             />
@@ -55,18 +35,17 @@ export default function StudioLoginPage() {
           <div className="st-field">
             <label className="st-label st-label-required" htmlFor="st-pass">Password</label>
             <input
+              name="password"
               type="password"
               id="st-pass"
               className="st-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
             />
           </div>
 
-          <button type="submit" className="st-login-submit" disabled={loading}>
-            {loading ? "A entrar..." : "Entrar"}
+          <button type="submit" className="st-login-submit" disabled={isPending}>
+            {isPending ? "A entrar..." : "Entrar"}
           </button>
         </form>
       </div>

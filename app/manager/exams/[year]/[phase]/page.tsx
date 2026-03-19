@@ -67,7 +67,7 @@ export default async function ExamDetailPage({
   ];
 
   return (
-    <div style={{ padding: "48px 48px", maxWidth: 1400, margin: "0 auto", width: "100%" }}>
+    <div style={{ padding: "32px 32px 40px", maxWidth: 1880, margin: "0 auto", width: "100%" }}>
       <Link 
         href="/manager/exams" 
         style={{ 
@@ -88,7 +88,7 @@ export default async function ExamDetailPage({
         <ArrowLeft size={16} /> Voltar aos Exames
       </Link>
 
-      <header style={{ marginBottom: 32 }}>
+      <header style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: "2.5rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 8 }}>
           Exame Nacional {year}
         </h1>
@@ -97,6 +97,9 @@ export default async function ExamDetailPage({
             {phase}ª Fase
           </span>
           Matemática A
+        </p>
+        <p style={{ margin: "10px 0 0", color: "var(--muted)", fontSize: "0.92rem" }}>
+          Viewer administrativo em modo leitura total: cada pergunta abre com critérios, tópicos, imagem, timestamps e todos os campos guardados em base de dados.
         </p>
       </header>
 

@@ -1,10 +1,12 @@
 import { getLatestReviewBrief } from "@/lib/ops-data";
 import { InboxFeed } from "@/components/inbox-feed";
 import { Layers } from "lucide-react";
+import { requireManagerUser } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function TodayDashboard() {
+  await requireManagerUser();
   const latestBrief = await getLatestReviewBrief();
 
   const rawCases = latestBrief?.cases ?? [];

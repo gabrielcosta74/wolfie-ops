@@ -11,7 +11,7 @@ export default async function TeacherProgressPage() {
       <div className="st-page-header">
         <div>
           <span className="st-page-kicker">Meu progresso</span>
-          <h1 className="st-page-title">Trabalho feito no Wolfie</h1>
+          <h1 className="st-page-title">Trabalho feito no Wolfi</h1>
           <p className="st-page-subtitle">Acompanha o que já reveste, o que sinalizaste e as sugestões que já enviaste.</p>
         </div>
       </div>

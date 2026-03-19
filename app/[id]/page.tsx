@@ -1,10 +1,12 @@
 import { getLatestReviewBrief } from "@/lib/ops-data";
 import { notFound } from "next/navigation";
 import { FocusTriageView } from "@/components/focus-triage-view";
+import { requireManagerUser } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function FocusDashboard({ params }: { params: Promise<{ id: string }> }) {
+  await requireManagerUser();
   const { id } = await params;
   const caseId = decodeURIComponent(id);
   const latestBrief = await getLatestReviewBrief();

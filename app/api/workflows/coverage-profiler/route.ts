@@ -1,9 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getOpsEnv } from "@/lib/env";
+import { requireManagerApiUser } from "@/lib/ops-auth";
+import { rejectUntrustedOriginForRoute } from "@/lib/request-security";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const originError = rejectUntrustedOriginForRoute(request);
+  if (originError) return originError;
+
+  const actor = await requireManagerApiUser();
+  if (actor instanceof NextResponse) return actor;
+
   const env = getOpsEnv();
 
   const response = await fetch(`${env.supabaseUrl}/functions/v1/coverage-profiler`, {

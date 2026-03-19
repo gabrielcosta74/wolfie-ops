@@ -33,17 +33,6 @@ export const MODEL_PRICING_EUR: Record<string, { inputPer1M: number; outputPer1M
     outputPer1M: 0.40,
     label: "Gemini 2.0 Flash",
   },
-  // OpenAI Models
-  "gpt-4o": {
-    inputPer1M: 2.30,
-    outputPer1M: 9.25,
-    label: "GPT-4o",
-  },
-  "gpt-4o-mini": {
-    inputPer1M: 0.14,
-    outputPer1M: 0.55,
-    label: "GPT-4o Mini",
-  },
 };
 
 // ---------------------------------------------------------------------------
@@ -98,16 +87,9 @@ export const COST_PER_CALL_EUR: Record<string, { cost: number; model: string; de
     description: "Correção de exame (foto)",
   },
   grade_resolution: {
-    cost: 0.0180,   // ~2000 in (+ image) + 500 out on GPT-4o
-    model: "gpt-4o",
-    description: "Correção de resolução (GPT-4o)",
-  },
-
-  // --- Internal Agent Operations ---
-  agent_run_generic: {
-    cost: 0.0300,   // ~3000 in + 2000 out on flash
+    cost: 0.0050,   // ~2000 in (+ image) + 500 out on gemini-2.5-flash
     model: "gemini-2.5-flash",
-    description: "Run de agente interno (média)",
+    description: "Correção de resolução (foto)",
   },
 };
 
@@ -124,8 +106,8 @@ export const INFRA_COSTS_EUR: Record<string, { cost: number; description: string
     description: "Domínio",
   },
   app_store: {
-    cost: 0,      // Apple Dev annual ÷ 12
-    description: "Apple Developer (€99/ano ÷ 12)",
+    cost: Number(((99 * USD_TO_EUR) / 12).toFixed(2)),
+    description: "Apple Developer (USD 99/ano amortizado)",
   },
 };
 

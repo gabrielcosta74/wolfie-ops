@@ -3,7 +3,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatDateTime } from "@/lib/format";
 import { listReviewBriefs } from "@/lib/ops-data";
 
-export const metadata = { title: "Relatórios | Wolfie Ops" };
+export const metadata = { title: "Relatórios | Wolfi Ops" };
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {

@@ -1,30 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireManagerApiUser } from "@/lib/ops-auth";
+import { rejectUntrustedOriginForRoute } from "@/lib/request-security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
 type Decision = "accepted" | "deferred" | "ignored";
 
-function getReviewerLabel(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Basic ")) {
-    return "ops-admin";
-  }
-
-  try {
-    const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf8");
-    const separator = decoded.indexOf(":");
-    if (separator < 0) return "ops-admin";
-    return decoded.slice(0, separator) || "ops-admin";
-  } catch {
-    return "ops-admin";
-  }
-}
-
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string; caseId: string }> },
 ) {
+  const originError = rejectUntrustedOriginForRoute(req);
+  if (originError) return originError;
+
+  const actor = await requireManagerApiUser();
+  if (actor instanceof NextResponse) return actor;
+
   const { id, caseId } = await context.params;
   const body = await req.json().catch(() => ({}));
   const decision = body?.decision as Decision | undefined;
@@ -35,7 +27,7 @@ export async function POST(
   }
 
   const supabase = getSupabaseAdmin();
-  const reviewerLabel = getReviewerLabel(req);
+  const reviewerLabel = actor.email ?? actor.id;
   const reviewedAt = new Date().toISOString();
 
   const { data: reviewCase, error: caseError } = await supabase

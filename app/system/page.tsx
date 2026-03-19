@@ -4,6 +4,7 @@ import { RunBriefGeneratorButton } from "@/components/run-brief-generator-button
 import { RunMonitorButton } from "@/components/run-monitor-button";
 import { RunCoverageProfilerButton } from "@/components/run-coverage-profiler-button";
 import { StatusBadge } from "@/components/status-badge";
+import { requireManagerUser } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ function WorkflowCard(props: {
 }
 
 export default async function SystemPage() {
+  await requireManagerUser();
   const latestBrief = await getLatestReviewBrief();
 
   return (
@@ -67,7 +69,7 @@ export default async function SystemPage() {
 
         <WorkflowCard
           title="Coverage Profiler"
-          description="Analisa cobertura, variedade e desequilíbrios da taxonomia oficial face ao conteúdo do Wolfie."
+          description="Analisa cobertura, variedade e desequilíbrios da taxonomia oficial face ao conteúdo do Wolfi."
           note="Gera sinais curriculares e de desequilíbrio para a revisão semanal."
           action={<RunCoverageProfilerButton />}
         />

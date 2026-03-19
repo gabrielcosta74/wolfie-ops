@@ -1,13 +1,21 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { PREMIUM_PRICE_EUR, COST_PER_CALL_EUR, TOTAL_INFRA_MONTHLY_EUR, USD_TO_EUR } from "@/lib/pricing-constants";
+import { PREMIUM_PRICE_EUR, COST_PER_CALL_EUR, TOTAL_INFRA_MONTHLY_EUR } from "@/lib/pricing-constants";
 import {
   DollarSign, TrendingUp, TrendingDown, Users, Zap,
-  CreditCard, Server, Bot, MessageSquare, BookCheck, Brain,
+  CreditCard, Server, Bot, Brain,
   Activity
 } from "lucide-react";
 import "../analytics/analytics.css";
 import CostBreakdownChart from "./components/CostBreakdownChart";
 import MonthlyBurnChart from "./components/MonthlyBurnChart";
+import {
+  buildSubscriptionChannelBenchmarks,
+  calculateAfterTaxProfit,
+  calculateSubscriptionUnitEconomics,
+  CONSERVATIVE_PREMIUM_CHANNEL_KEY,
+  PORTUGAL_EFFECTIVE_PROFIT_TAX_RATE,
+  PORTUGAL_VAT_RATE,
+} from "@/lib/subscription-economics";
 
 export const dynamic = "force-dynamic";
 
@@ -22,25 +30,19 @@ async function getFinancialsData() {
 
   const [
     walletsRes,
-    ledgerByActionRes,
     ledgerByMonthRes,
     doubtsRes,
     examSubmissionsRes,
-    agentRunsRes,
     totalUsersRes,
   ] = await Promise.all([
     // User wallets by plan
     supabase.rpc("get_wallet_summary_by_plan"),
-    // Token ledger by action_key
-    supabase.rpc("get_ledger_summary_by_action"),
     // Token ledger by month
     supabase.rpc("get_ledger_summary_by_month"),
     // Doubt events total
     supabase.from("quiz_doubt_events").select("id", { count: "exact", head: true }),
     // Exam submissions graded
     supabase.from("exame_submissions").select("id", { count: "exact", head: true }).eq("status", "graded"),
-    // Agent runs total
-    supabase.from("agent_runs").select("id", { count: "exact", head: true }),
     // Total auth users (profiles count)
     supabase.from("profiles").select("user_id", { count: "exact", head: true }),
   ]);
@@ -112,10 +114,17 @@ async function getFinancialsData() {
   const freeUsers = walletsByPlan.find(w => w.plan_code === "free")?.user_count || 0;
   const totalWalletUsers = walletsByPlan.reduce((a, w) => a + w.user_count, 0);
   const totalUsers = totalUsersRes.count || totalWalletUsers;
-  const usersWithoutWallet = totalUsers - totalWalletUsers;
 
   // Revenue
-  const monthlyRevenue = premiumUsers * PREMIUM_PRICE_EUR;
+  const premiumRevenueUnit = calculateSubscriptionUnitEconomics(
+    PREMIUM_PRICE_EUR,
+    CONSERVATIVE_PREMIUM_CHANNEL_KEY,
+  );
+  const channelBenchmarks = buildSubscriptionChannelBenchmarks(PREMIUM_PRICE_EUR);
+  const grossMonthlyRevenue = premiumUsers * PREMIUM_PRICE_EUR;
+  const vatOnSubscriptions = premiumUsers * premiumRevenueUnit.vatComponentEur;
+  const storeFeesOnSubscriptions = premiumUsers * premiumRevenueUnit.storeFeeEur;
+  const monthlyRevenue = premiumUsers * premiumRevenueUnit.platformProceedsPreTaxEur;
 
   // AI costs by feature (Precise Token Calculation)
   // We use the new View which groups by action_key and model.
@@ -154,21 +163,20 @@ async function getFinancialsData() {
     })
     .sort((a, b) => b.estimated_cost_eur - a.estimated_cost_eur);
 
-  // Agent costs (estimated from runs)
-  const totalAgentRuns = agentRunsRes.count || 0;
-  const agentCostPerRun = COST_PER_CALL_EUR.agent_run_generic?.cost || 0.03;
-  const totalAgentCostEur = totalAgentRuns * agentCostPerRun;
-
   // Exam grading cost (untracked in ledger but we know from submissions)
   const examGradedCount = examSubmissionsRes.count || 0;
   const examGradingCost = examGradedCount * (COST_PER_CALL_EUR.grade_exam?.cost || 0.004);
 
   // Total AI cost
   const totalUserAiCostEur = aiCostBreakdown.reduce((a, b) => a + b.estimated_cost_eur, 0);
-  const totalAiCost = totalUserAiCostEur + totalAgentCostEur + examGradingCost;
+  const totalAiCost = totalUserAiCostEur + examGradingCost;
 
   // Burn rate
   const totalMonthlyCost = totalAiCost + TOTAL_INFRA_MONTHLY_EUR;
+  const pretaxNetMonthly = monthlyRevenue - totalMonthlyCost;
+  const { estimatedCorporateTaxEur, afterTaxProfitEur } = calculateAfterTaxProfit(
+    pretaxNetMonthly,
+  );
 
   // Unit economics
   const costPerActiveUser = totalUsers > 0 ? totalMonthlyCost / totalUsers : 0;
@@ -181,7 +189,9 @@ async function getFinancialsData() {
   const braincellsPerFreeUserMonthly = 50 * 30;
   const maxCostPerFreeUserMonthly = braincellsPerFreeUserMonthly * AVG_COST_PER_BRAINCELL_EUR; // ~€0.18
   const totalFreeTierLiabilityMonthly = freeUsers * maxCostPerFreeUserMonthly;
-  const freeTierCoverageRatio = Math.round(PREMIUM_PRICE_EUR / maxCostPerFreeUserMonthly); // ~50 users
+  const freeTierCoverageRatio = maxCostPerFreeUserMonthly > 0
+    ? Math.max(0, Math.floor(premiumRevenueUnit.platformProceedsPreTaxEur / maxCostPerFreeUserMonthly))
+    : 0;
 
   return {
     // Users
@@ -189,12 +199,15 @@ async function getFinancialsData() {
     premiumUsers,
     freeUsers,
     // Revenue
+    grossMonthlyRevenue,
+    vatOnSubscriptions,
+    storeFeesOnSubscriptions,
     monthlyRevenue,
+    premiumRevenueUnit,
+    channelBenchmarks,
     // Costs
     aiCostBreakdown,
     totalUserAiCostEur,
-    totalAgentCostEur,
-    totalAgentRuns,
     examGradedCount,
     examGradingCost,
     totalAiCost,
@@ -203,7 +216,9 @@ async function getFinancialsData() {
     // Economics
     costPerActiveUser,
     revenuePerUser,
-    netMonthly: monthlyRevenue - totalMonthlyCost,
+    pretaxNetMonthly,
+    estimatedCorporateTaxEur,
+    netMonthly: afterTaxProfitEur,
     // Monthly trend
     ledgerByMonth,
     // Counts
@@ -249,9 +264,9 @@ export default async function FinancialsPage() {
       {/* ── KPI Cards ─────────────────────────────────────────────── */}
       <div className="kpi-grid">
         <KpiCard
-          label="Revenue Mensal"
+          label="Receita Líquida Plataforma"
           value={eur(d.monthlyRevenue)}
-          sub={`${d.premiumUsers} premium × ${eur(PREMIUM_PRICE_EUR)}`}
+          sub={`${d.premiumUsers} premium · conservador ${d.premiumRevenueUnit.channelLabel}`}
           icon={<TrendingUp size={24} />}
           color="#34d399"
           deltaType="positive"
@@ -264,9 +279,9 @@ export default async function FinancialsPage() {
           color="#fbbf24"
         />
         <KpiCard
-          label="Net Mensal"
+          label="Net Mensal Pós-Imposto"
           value={eur(d.netMonthly, 2)}
-          sub={isProfit ? "Lucro ✓" : "Prejuízo ⚠️"}
+          sub={isProfit ? "Lucro estimado ✓" : "Prejuízo estimado ⚠️"}
           icon={isProfit ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
           color={isProfit ? "#34d399" : "#f87171"}
           deltaType={isProfit ? "positive" : "negative"}
@@ -298,14 +313,18 @@ export default async function FinancialsPage() {
               P&L Mensal
             </h3>
             <div style={{ display: "grid", gap: 12 }}>
-              <MetricRow label="Revenue" value={eur(d.monthlyRevenue)} valueColor="#34d399" />
+              <MetricRow label="Faturação bruta" value={eur(d.grossMonthlyRevenue)} />
+              <MetricRow label="IVA PT (23%)" value={`-${eur(d.vatOnSubscriptions)}`} valueColor="#f87171" />
+              <MetricRow label={`Store fees (${Math.round(d.premiumRevenueUnit.storeFeeRate * 100)}%)`} value={`-${eur(d.storeFeesOnSubscriptions)}`} valueColor="#f87171" />
+              <MetricRow label="Receita líquida plataforma" value={eur(d.monthlyRevenue)} valueColor="#34d399" highlight />
               <MetricRow label="Custos IA (User-facing)" value={`-${eur(d.totalUserAiCostEur, 4)}`} valueColor="#f87171" />
-              <MetricRow label="Custos IA (Agents Internos)" value={`-${eur(d.totalAgentCostEur, 4)}`} valueColor="#f87171" />
               <MetricRow label="Custos IA (Exam Grading)" value={`-${eur(d.examGradingCost, 4)}`} valueColor="#f87171" />
               <MetricRow label="Infraestrutura" value={`-${eur(d.infraCost)}`} valueColor="#f87171" />
+              <MetricRow label="Resultado pré-imposto" value={eur(d.pretaxNetMonthly, 2)} valueColor={d.pretaxNetMonthly >= 0 ? "#34d399" : "#f87171"} />
+              <MetricRow label={`IRC estimado (${(PORTUGAL_EFFECTIVE_PROFIT_TAX_RATE * 100).toFixed(1)}%)`} value={`-${eur(d.estimatedCorporateTaxEur, 2)}`} valueColor="#f87171" />
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 12, marginTop: 4 }}>
                 <MetricRow
-                  label="Net"
+                  label="Net pós-imposto"
                   value={eur(d.netMonthly, 2)}
                   valueColor={isProfit ? "#34d399" : "#f87171"}
                   highlight
@@ -323,12 +342,19 @@ export default async function FinancialsPage() {
               <MetricRow label="Revenue por User" value={eurSm(d.revenuePerUser)} />
               <MetricRow label="Custo IA por User" value={eurSm(d.costPerActiveUser)} />
               <MetricRow
-                label="Margem por User"
+                label="Margem pré-imposto / User"
                 value={eurSm(d.revenuePerUser - d.costPerActiveUser)}
                 valueColor={d.revenuePerUser >= d.costPerActiveUser ? "#34d399" : "#f87171"}
               />
               <MetricRow label="Custo médio por dúvida IA" value={d.totalDoubts > 0 ? eurSm(d.totalUserAiCostEur / d.totalDoubts) : "—"} />
-              <MetricRow label="Users necessários para breakeven" value={d.totalAiCost > 0 ? String(Math.ceil(d.totalAiCost / PREMIUM_PRICE_EUR)) : "0"} />
+              <MetricRow
+                label="Premium necessários p/ breakeven"
+                value={
+                  d.premiumRevenueUnit.platformProceedsPreTaxEur > 0
+                    ? String(Math.ceil(d.totalMonthlyCost / d.premiumRevenueUnit.platformProceedsPreTaxEur))
+                    : "0"
+                }
+              />
             </div>
           </div>
 
@@ -344,12 +370,12 @@ export default async function FinancialsPage() {
               <MetricRow label="Custo Máximo/User Mensal" value={eurSm(d.maxCostPerFreeUserMonthly)} highlight valueColor="#facc15" />
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 12, marginTop: 4 }}>
                 <MetricRow label="Risco Total (100% Usage)" value={eur(d.totalFreeTierLiabilityMonthly, 2)} valueColor="#f87171" badge={`Baseado em ${d.freeUsers} free users`} />
-                <MetricRow label="Rendimento Premium vs Free" value={`1 Premium : ${d.freeTierCoverageRatio} Free`} badge="Breakeven Coverage" />
+                <MetricRow label="Cobertura Premium vs Free" value={`1 Premium : ${d.freeTierCoverageRatio} Free`} badge="após IVA + store fee" />
               </div>
             </div>
             <div style={{ marginTop: 16, padding: 12, background: "rgba(52, 211, 153, 0.1)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(52, 211, 153, 0.2)" }}>
               <p style={{ margin: 0, fontSize: "0.85rem", color: "#6ee7b7" }}>
-                💡 1 plano Premium (€8.99) cobre facilmente o custo de até ~{d.freeTierCoverageRatio} utilizadores free a consumirem 100% da sua quota todos os dias.
+                💡 O modelo conservador assume preço ao consumidor com IVA PT incluído e fee de loja do cenário mais caro para Premium.
               </p>
             </div>
           </div>
@@ -379,7 +405,8 @@ export default async function FinancialsPage() {
             <MetricRow label="Free Users" value={String(d.freeUsers)} badge="€0 revenue" />
             <MetricRow label="Conversão Free→Premium" value={d.totalUsers > 0 ? `${Math.round((d.premiumUsers / d.totalUsers) * 100)}%` : "0%"} />
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 12, marginTop: 4 }}>
-              <MetricRow label="Revenue Mensal Total" value={eur(d.monthlyRevenue)} highlight />
+              <MetricRow label="Faturação Bruta" value={eur(d.grossMonthlyRevenue)} />
+              <MetricRow label="Receita Líquida Plataforma" value={eur(d.monthlyRevenue)} highlight />
             </div>
           </div>
           
@@ -391,7 +418,6 @@ export default async function FinancialsPage() {
             <MetricRow label="Supabase" value="€0 (Free Plan)" />
             <MetricRow label="Edge Functions" value="Free (500K inv/mês)" />
             <MetricRow label="Gemini API" value="Pay-per-use" />
-            <MetricRow label="OpenAI API" value="Pay-per-use" />
           </div>
           <div style={{ marginTop: 16, padding: 12, background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
             <p style={{ margin: 0, fontSize: "0.85rem", color: "#fcd34d" }}>
@@ -400,6 +426,49 @@ export default async function FinancialsPage() {
           </div>
         </div>
       </div>
+
+      <section className="glass-card" style={{ marginBottom: 24 }}>
+        <div className="chart-header">
+          <h2 className="chart-title">
+            <CreditCard size={20} style={{ display: 'inline', marginRight: 8, verticalAlign: 'text-bottom' }} />
+            Premissas de Stores e Fiscalidade
+          </h2>
+        </div>
+        <div style={{ display: "grid", gap: 12 }}>
+          <MetricRow label="IVA modelado" value={`${Math.round(PORTUGAL_VAT_RATE * 100)}%`} badge="Portugal Continental" />
+          <MetricRow label="Imposto sobre lucro modelado" value={`${(PORTUGAL_EFFECTIVE_PROFIT_TAX_RATE * 100).toFixed(1)}%`} badge="IRC 19% + derrama municipal 1.5%" />
+          <MetricRow label="Canal conservador Premium" value={d.premiumRevenueUnit.channelLabel} badge={`${Math.round(d.premiumRevenueUnit.storeFeeRate * 100)}% fee`} />
+        </div>
+        <div className="glass-table-wrapper" style={{ marginTop: 16 }}>
+          <table className="glass-table">
+            <thead>
+              <tr>
+                <th>Canal</th>
+                <th style={{ textAlign: "right" }}>Preço bruto</th>
+                <th style={{ textAlign: "right" }}>IVA</th>
+                <th style={{ textAlign: "right" }}>Fee loja</th>
+                <th style={{ textAlign: "right" }}>Receita líquida</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.channelBenchmarks.map((channel) => (
+                <tr key={channel.channelKey}>
+                  <td>
+                    <div style={{ display: "grid", gap: 4 }}>
+                      <strong>{channel.channelLabel}</strong>
+                      <span style={{ color: "var(--muted)", fontSize: "0.78rem" }}>{channel.channelNote}</span>
+                    </div>
+                  </td>
+                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{eur(channel.grossPriceEur)}</td>
+                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#f87171" }}>-{eur(channel.vatComponentEur)}</td>
+                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#f87171" }}>-{eur(channel.storeFeeEur)}</td>
+                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#34d399" }}>{eur(channel.platformProceedsPreTaxEur)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {/* AI Cost Breakdown Detailed Table */}
       <section className="glass-card">
@@ -429,14 +498,6 @@ export default async function FinancialsPage() {
                   </td>
                 </tr>
               ))}
-              {/* Agent runs row */}
-              <tr>
-                <td className="bold-cell">Agent Workflows (Ops)</td>
-                <td><span className="badge-date" style={{ color: 'var(--text)', background: 'rgba(255,255,255,0.05)' }}>gemini-2.5-flash</span></td>
-                <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{d.totalAgentRuns.toLocaleString('pt-PT')}</td>
-                <td style={{ textAlign: "right", color: "var(--muted)" }}>—</td>
-                <td className="bold-cell" style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: '#fbbf24' }}>{eurSm(d.totalAgentCostEur)}</td>
-              </tr>
               {/* Exam grading untracked */}
               {d.examGradedCount > 0 && (
                 <tr>

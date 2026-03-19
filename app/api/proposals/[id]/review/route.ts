@@ -1,25 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireManagerApiUser } from "@/lib/ops-auth";
+import { rejectUntrustedOriginForRoute } from "@/lib/request-security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
 type Decision = "approved" | "rejected" | "needs_revision";
-
-function getReviewerLabel(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Basic ")) {
-    return "ops-admin";
-  }
-
-  try {
-    const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf8");
-    const separator = decoded.indexOf(":");
-    if (separator < 0) return "ops-admin";
-    return decoded.slice(0, separator) || "ops-admin";
-  } catch {
-    return "ops-admin";
-  }
-}
 
 function mapStatuses(decision: Decision) {
   if (decision === "approved") {
@@ -34,6 +20,12 @@ function mapStatuses(decision: Decision) {
 }
 
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const originError = rejectUntrustedOriginForRoute(req);
+  if (originError) return originError;
+
+  const actor = await requireManagerApiUser();
+  if (actor instanceof NextResponse) return actor;
+
   const { id } = await context.params;
   const body = await req.json().catch(() => ({}));
   const decision = body?.decision as Decision | undefined;
@@ -44,7 +36,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   }
 
   const supabase = getSupabaseAdmin();
-  const reviewerLabel = getReviewerLabel(req);
+  const reviewerLabel = actor.email ?? actor.id;
 
   const { data: proposal, error: proposalError } = await supabase
     .from("agent_proposals")

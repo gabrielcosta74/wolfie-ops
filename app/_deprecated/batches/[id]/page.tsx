@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { getLatestReviewBrief } from "@/lib/ops-data";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Detalhe do Caso | Wolfie Ops" };
+export const metadata = { title: "Detalhe do Caso | Wolfi Ops" };
 
 function categoryTone(category: string) {
   if (category === "editorial") return "warning";

@@ -6,6 +6,12 @@ import {
   PREMIUM_PRICE_EUR,
   TOTAL_INFRA_MONTHLY_EUR,
 } from "@/lib/pricing-constants";
+import {
+  calculateAfterTaxProfit,
+  calculateSubscriptionUnitEconomics,
+  CONSERVATIVE_PREMIUM_CHANNEL_KEY,
+  PORTUGAL_EFFECTIVE_PROFIT_TAX_RATE,
+} from "@/lib/subscription-economics";
 
 export type PricingProfileStatus = "draft" | "active" | "archived";
 
@@ -130,18 +136,32 @@ export type PricingScenarioMetrics = {
     freeUsers: number;
     premiumUsers: number;
     monthlyRevenueEur: number;
+    vatOnSubscriptionsEur: number;
+    storeFeesEur: number;
+    netSubscriptionRevenueEur: number;
     aiCostEur30d: number;
     infraCostMonthlyEur: number;
+    pretaxNetMonthlyEur: number;
+    estimatedCorporateTaxEur: number;
     netMonthlyEur: number;
   };
   modeled: {
     avgCostPerBraincellEur: number;
     avgChatCostPerBraincellEur: number;
+    premiumCostPerBraincellEur: number;
     freeMonthlyLiabilityEur: number;
     freeChatMonthlyLiabilityEur: number;
     freeChatWeeklyBudgetBraincells: number | null;
+    premiumVatPerSubscriptionEur: number;
+    premiumStoreFeePerSubscriptionEur: number;
+    premiumNetRevenuePerSubscriptionEur: number;
+    premiumRevenueChannelLabel: string;
+    premiumRevenueChannelKey: string;
+    premiumRevenueChannelFeeRate: number;
+    premiumTaxRate: number;
     premiumMonthlyQuotaCostEur: number;
     premiumContributionMarginEur: number;
+    premiumContributionAfterTaxEur: number;
     onePremiumCoversFreeUsers: number | null;
   };
   unitEconomics: FeatureUnitEconomics[];
@@ -614,6 +634,20 @@ function averageBraincellCost(bundle: PricingProfileBundle, observedRows: AiCost
   return ratios.reduce((sum, value) => sum + value, 0) / ratios.length;
 }
 
+function averagePremiumBraincellCost(bundle: PricingProfileBundle, observedRows: AiCostViewRow[]) {
+  const observedAverage = averageBraincellCost(bundle, observedRows);
+  const premiumRatios = buildFeatureUnitEconomics(bundle)
+    .map((item) => item.premium_cost_per_braincell_eur)
+    .filter((value): value is number => value !== null && Number.isFinite(value) && value > 0);
+
+  if (premiumRatios.length === 0) return observedAverage;
+
+  const premiumAverage =
+    premiumRatios.reduce((sum, value) => sum + value, 0) / premiumRatios.length;
+
+  return Math.max(observedAverage, premiumAverage);
+}
+
 function averageCostPerBraincellForAction(
   bundle: PricingProfileBundle,
   observedRows: AiCostViewRow[],
@@ -671,6 +705,10 @@ export async function getPricingScenarioMetrics(status: PricingProfileStatus = "
   const providerCostMap = buildProviderCostMap(bundle);
   const premiumPlan = getPlan(bundle, "premium");
   const freePlan = getPlan(bundle, "free");
+  const premiumUnitRevenue = calculateSubscriptionUnitEconomics(
+    premiumPlan?.monthly_price_eur ?? PREMIUM_PRICE_EUR,
+    CONSERVATIVE_PREMIUM_CHANNEL_KEY,
+  );
 
   let observedAiCostEur = 0;
   for (const row of aiCosts) {
@@ -700,10 +738,15 @@ export async function getPricingScenarioMetrics(status: PricingProfileStatus = "
   const freeUsers = wallets.filter((wallet) => wallet.plan_code === "free").length;
   const totalUsers = wallets.length;
   const monthlyRevenueEur = premiumUsers * (premiumPlan?.monthly_price_eur ?? PREMIUM_PRICE_EUR);
+  const vatOnSubscriptionsEur = premiumUsers * premiumUnitRevenue.vatComponentEur;
+  const storeFeesEur = premiumUsers * premiumUnitRevenue.storeFeeEur;
+  const netSubscriptionRevenueEur =
+    premiumUsers * premiumUnitRevenue.platformProceedsPreTaxEur;
   const infraCostMonthlyEur = bundle.infraCosts
     .filter((item) => item.is_active)
     .reduce((sum, item) => sum + item.monthly_cost_eur, 0);
   const avgCostPerBraincellEur = averageBraincellCost(bundle, aiCosts);
+  const premiumCostPerBraincellEur = averagePremiumBraincellCost(bundle, aiCosts);
   const avgChatCostPerBraincellEur =
     averageCostPerBraincellForAction(bundle, aiCosts, "chat_tutor_message") ??
     avgCostPerBraincellEur;
@@ -712,10 +755,22 @@ export async function getPricingScenarioMetrics(status: PricingProfileStatus = "
   const freeMonthlyLiabilityEur = (freePlan?.daily_braincells ?? 0) * 30 * avgCostPerBraincellEur;
   const freeChatMonthlyLiabilityEur =
     freeChatWeeklyBudgetBraincells * (30 / 7) * avgChatCostPerBraincellEur;
-  const premiumMonthlyQuotaCostEur = (premiumPlan?.daily_braincells ?? 0) * 30 * avgCostPerBraincellEur;
-  const premiumContributionMarginEur = (premiumPlan?.monthly_price_eur ?? PREMIUM_PRICE_EUR) - premiumMonthlyQuotaCostEur;
+  const premiumMonthlyQuotaCostEur =
+    (premiumPlan?.daily_braincells ?? 0) * 30 * premiumCostPerBraincellEur;
+  const premiumContributionMarginEur =
+    premiumUnitRevenue.platformProceedsPreTaxEur - premiumMonthlyQuotaCostEur;
+  const premiumContributionAfterTaxEur = calculateAfterTaxProfit(
+    premiumContributionMarginEur,
+  ).afterTaxProfitEur;
   const onePremiumCoversFreeUsers =
-    freeMonthlyLiabilityEur > 0 ? (premiumPlan?.monthly_price_eur ?? PREMIUM_PRICE_EUR) / freeMonthlyLiabilityEur : null;
+    freeMonthlyLiabilityEur > 0
+      ? premiumContributionMarginEur / freeMonthlyLiabilityEur
+      : null;
+  const pretaxNetMonthlyEur =
+    netSubscriptionRevenueEur - observedAiCostEur - infraCostMonthlyEur;
+  const { estimatedCorporateTaxEur, afterTaxProfitEur } = calculateAfterTaxProfit(
+    pretaxNetMonthlyEur,
+  );
 
   return {
     bundle,
@@ -724,18 +779,33 @@ export async function getPricingScenarioMetrics(status: PricingProfileStatus = "
       freeUsers,
       premiumUsers,
       monthlyRevenueEur,
+      vatOnSubscriptionsEur,
+      storeFeesEur,
+      netSubscriptionRevenueEur,
       aiCostEur30d: observedAiCostEur,
       infraCostMonthlyEur,
-      netMonthlyEur: monthlyRevenueEur - observedAiCostEur - infraCostMonthlyEur,
+      pretaxNetMonthlyEur,
+      estimatedCorporateTaxEur,
+      netMonthlyEur: afterTaxProfitEur,
     },
     modeled: {
       avgCostPerBraincellEur,
       avgChatCostPerBraincellEur,
+      premiumCostPerBraincellEur,
       freeMonthlyLiabilityEur,
       freeChatMonthlyLiabilityEur,
       freeChatWeeklyBudgetBraincells,
+      premiumVatPerSubscriptionEur: premiumUnitRevenue.vatComponentEur,
+      premiumStoreFeePerSubscriptionEur: premiumUnitRevenue.storeFeeEur,
+      premiumNetRevenuePerSubscriptionEur:
+        premiumUnitRevenue.platformProceedsPreTaxEur,
+      premiumRevenueChannelLabel: premiumUnitRevenue.channelLabel,
+      premiumRevenueChannelKey: premiumUnitRevenue.channelKey,
+      premiumRevenueChannelFeeRate: premiumUnitRevenue.storeFeeRate,
+      premiumTaxRate: PORTUGAL_EFFECTIVE_PROFIT_TAX_RATE,
       premiumMonthlyQuotaCostEur,
       premiumContributionMarginEur,
+      premiumContributionAfterTaxEur,
       onePremiumCoversFreeUsers,
     },
     unitEconomics: buildFeatureUnitEconomics(bundle),

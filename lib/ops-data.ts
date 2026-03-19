@@ -310,7 +310,7 @@ function buildDecisionModel(params: {
     defaultApproveOutcome = "Avança o item para uma fila de revisão ou edição humana controlada.";
     defaultRejectOutcome = "Rejeita o plano. O processo automático para por aqui e não há lugar a curadoria humana extra.";
   } else if (proposal.proposal_type === "content_update") {
-    defaultApproveOutcome = "Aplica as alterações curriculares e de dados diretamente no sistema do Wolfie.";
+    defaultApproveOutcome = "Aplica as alterações curriculares e de dados diretamente no sistema do Wolfi.";
     defaultRejectOutcome = "Bloqueia a mudança sugerida. O currículo/conteúdo manter-se-á como estava.";
   }
 
@@ -1081,7 +1081,7 @@ function getBriefItemExpectedOutcome(item: ReviewBriefItemRow) {
   }
 
   if (item.category === "curricular") {
-    return "Conteúdo do Wolfie mais alinhado com o programa e os exames.";
+    return "Conteúdo do Wolfi mais alinhado com o programa e os exames.";
   }
 
   if (item.category === "editorial") {

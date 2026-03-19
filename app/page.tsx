@@ -1,223 +1,191 @@
-"use client";
+import { Navbar } from "@/components/landing/Navbar";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { MetamorphosisScroll } from "@/components/landing/MetamorphosisScroll";
+import { CinematicFeatures } from "@/components/landing/CinematicFeatures";
+import { ContributionCTA } from "@/components/landing/ContributionCTA";
+import { ZoomParallax } from "@/components/landing/ZoomParallax";
+import { LogoCarousel, type Logo } from "@/components/landing/LogoCarousel";
 
-import React, { useRef, useEffect } from "react";
-import Image from "next/image";
-import { motion, useScroll, useTransform, Variants } from "framer-motion";
-import { ArrowRight, Clock, BrainCircuit, ShieldCheck } from "lucide-react";
-import "./landing.css";
-
-const AppleIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M16.536 12.001c.026-2.522 2.064-3.722 2.158-3.784-1.171-1.713-2.992-1.944-3.65-1.984-1.55-.157-3.033.91-3.823.91-.79 0-2.022-.892-3.314-.868-1.685.024-3.238.979-4.108 2.493-1.769 3.067-.453 7.608 1.258 10.082.84 1.215 1.83 2.585 3.12 2.535 1.238-.052 1.715-.802 3.197-.802 1.48 0 1.905.802 3.22.778 1.341-.026 2.18-.124 3.018-1.341 1.05-1.536 1.484-3.023 1.503-3.1-1.616-.628-2.618-2.316-2.579-4.919zm-2.03-7.58c.683-.827 1.144-1.977 1.018-3.127-1.002.04-2.188.667-2.894 1.517-.633.754-1.185 1.93-1.036 3.05 1.121.087 2.228-.614 2.912-1.44z" />
-  </svg>
-);
-
-const PlayStoreIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.16 11L5.92 3.19C5.4 2.89 4.86 3.1 4.86 3.78V20.22C4.86 20.9 5.4 21.11 5.92 20.81L19.16 13C19.72 12.67 19.72 11.33 19.16 11Z" />
-  </svg>
-);
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 60 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
+export const metadata = {
+  title: "Wolfi | Top AI Math Tutor",
 };
 
-const stagger: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
-};
+const TecnicoLogo = () => (
+  <div
+    className="flex flex-col items-start leading-none font-bold text-white tracking-widest"
+    style={{ fontFamily: "Arial, sans-serif" }}
+  >
+    <span className="text-xl">TÉCNICO</span>
+    <span className="text-lg">LISBOA</span>
+  </div>
+);
+
+const IscteLogo = () => (
+  <div className="flex flex-col items-start text-white">
+    <span className="text-3xl font-black tracking-tighter leading-none lowercase">
+      iscte
+    </span>
+    <span className="mt-1 text-[6px] font-medium leading-tight tracking-[0.2em]">
+      INSTITUTO <br /> UNIVERSITÁRIO <br /> DE LISBOA
+    </span>
+  </div>
+);
+
+const FmulLogo = () => (
+  <div className="flex items-center gap-2 text-white">
+    <svg
+      width="24"
+      height="28"
+      viewBox="0 0 24 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="opacity-80"
+    >
+      <path d="M12 2L4 6v8c0 5 3.5 9.5 8 12 4.5-2.5 8-7 8-12V6z" />
+    </svg>
+    <div className="flex flex-col items-start leading-none">
+      <span className="font-serif text-2xl font-bold tracking-wider">FMUL</span>
+    </div>
+  </div>
+);
+
+const UcpLogo = () => (
+  <div className="flex items-center gap-2 text-white">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11 2h2v6h6v2h-6v12h-2V10H5V8h6V2z" />
+    </svg>
+    <span className="text-left font-serif text-[10px] font-bold leading-[1.1] tracking-tight">
+      UNIVERSIDADE
+      <br />
+      CATÓLICA
+      <br />
+      PORTUGUESA
+    </span>
+  </div>
+);
+
+const UPortoLogo = () => (
+  <div className="flex items-center text-3xl font-bold tracking-tighter text-white">
+    <span className="font-light">U.</span>PORTO
+  </div>
+);
+
+const FctNovaLogo = () => (
+  <div className="flex items-end gap-1.5 leading-none tracking-tighter text-white">
+    <span className="text-3xl font-black">NOVA</span>
+    <span className="mb-0.5 text-lg font-medium text-slate-300">FCT</span>
+  </div>
+);
+
+const NovaSbeLogo = () => (
+  <div className="flex flex-col items-start leading-none tracking-tighter text-white">
+    <span className="text-2xl font-black">NOVA</span>
+    <span className="text-xl font-light">SBE</span>
+  </div>
+);
+
+const UcLogo = () => (
+  <div className="flex flex-col items-center font-serif leading-none text-white">
+    <span className="text-3xl font-bold tracking-widest">U C</span>
+    <span className="mt-1 text-[6px] font-medium tracking-[0.2em] text-slate-300">
+      UNIVERSIDADE DE COIMBRA
+    </span>
+  </div>
+);
+
+const UMinhoLogo = () => (
+  <div className="flex scale-75 flex-col items-center justify-center text-white">
+    <span className="font-serif text-lg italic leading-none">Universidade</span>
+    <span className="mt-0.5 border-t border-slate-500 pt-0.5 font-serif text-xl leading-none">
+      do Minho
+    </span>
+  </div>
+);
+
+const UbiLogo = () => (
+  <div className="flex items-center gap-1.5 tracking-tighter text-white">
+    <span className="text-3xl font-black">UBI</span>
+  </div>
+);
+
+const UNIVERSITY_LOGOS: Logo[] = [
+  { id: 1, name: "IST", component: <TecnicoLogo /> },
+  { id: 2, name: "UPORTO", component: <UPortoLogo /> },
+  { id: 3, name: "FCT_NOVA", component: <FctNovaLogo /> },
+  { id: 4, name: "ISCTE", component: <IscteLogo /> },
+  { id: 5, name: "FMUL", component: <FmulLogo /> },
+  { id: 6, name: "UC", component: <UcLogo /> },
+  { id: 7, name: "UMINHO", component: <UMinhoLogo /> },
+  { id: 8, name: "UBI", component: <UbiLogo /> },
+  { id: 9, name: "Catolica", component: <UcpLogo /> },
+  { id: 10, name: "NOVA_SBE", component: <NovaSbeLogo /> },
+];
+
+const PARALLAX_IMAGES = [
+  {
+    src: "/hobbie1.jpg",
+    alt: "Estilo de vida Wolfi",
+  },
+  {
+    src: "/hobbie2.jpg",
+    alt: "Experiência de Sucesso",
+  },
+  {
+    src: "/hobbie3.jpg",
+    alt: "Momentos de Descontração",
+  },
+  {
+    src: "/hobbie4.jpg",
+    alt: "Equilíbrio Estudo e Lazer",
+  },
+  {
+    src: "/hobbie5.jpg",
+    alt: "Rotina de Elevada Performance",
+  },
+  {
+    src: "/hobbie6.jpg",
+    alt: "Estudos com Amigos",
+  },
+  {
+    src: "/hobbie7.jpg",
+    alt: "Hobbies e Paixões",
+  },
+];
 
 export default function LandingPage() {
-  const phoneRef = useRef<HTMLDivElement>(null);
-
-  // Scoped scroll tracking: only the phone section drives the 3D rotation
-  const { scrollYProgress: phoneProgress } = useScroll({
-    target: phoneRef,
-    offset: ["start end", "center center"],
-  });
-
-  const phoneRotateX = useTransform(phoneProgress, [0, 1], [50, 5]);
-  const phoneRotateZ = useTransform(phoneProgress, [0, 1], [-30, 0]);
-  const phoneScale = useTransform(phoneProgress, [0, 1], [0.85, 1]);
-
-  useEffect(() => {
-    document.body.classList.add("landing-page-active");
-    return () => document.body.classList.remove("landing-page-active");
-  }, []);
-
   return (
-    <div className="lp-wrapper">
-      {/* Fixed ambient blobs (CSS animated, no JS overhead) */}
-      <div className="lp-blob-container">
-        <div className="lp-blob-1" />
-        <div className="lp-blob-2" />
-        <div className="lp-blob-3" />
-      </div>
+    <div className="relative w-full bg-[#020817] font-sans text-white selection:bg-blue-500/30 selection:text-white">
+      <Navbar />
 
-      <nav className="lp-nav">
-        <div className="lp-logo">
-          <div className="lp-logo-w">W</div>
-          Wolfie
-        </div>
-      </nav>
+      <main className="flex w-full flex-col">
+        <HeroSection />
 
-      {/* ===== HERO ===== */}
-      <motion.section
-        className="lp-hero"
-        variants={stagger}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.h1 variants={fadeUp}>
-          Substitui horas<br />por clareza.
-        </motion.h1>
-        <motion.p className="lp-hero-sub" variants={fadeUp}>
-          O teu tutor privado, a fundo no secundário.
-        </motion.p>
-        <motion.p className="lp-hero-desc" variants={fadeUp}>
-          A primeira IA desenhada para dominar os Exames Nacionais. Sem distrações — explica-te tudo passo a passo e não te deixa desistir.
-        </motion.p>
-        <motion.div variants={fadeUp} className="lp-scroll-hint">
-          ↓ Faz scroll para descobrir
-        </motion.div>
-      </motion.section>
-
-      {/* ===== 3D PHONE (Scroll-driven rotation scoped to this section only) ===== */}
-      <section className="lp-phone-section" ref={phoneRef}>
-        <motion.div
-          className="lp-phone-wrapper"
-          style={{
-            rotateX: phoneRotateX,
-            rotateZ: phoneRotateZ,
-            scale: phoneScale,
-          }}
-        >
-          <div className="lp-phone-frame">
-            <div className="lp-phone-screen">
-              <div className="lp-dynamic-island" />
-              <Image
-                src="/wolfie_chat_tutor.png"
-                alt="Wolfie explicando Matemática passo-a-passo"
-                fill
-                className="lp-phone-image"
-                unoptimized
-                priority
-              />
-            </div>
+        <section className="w-full border-y border-white/5 bg-white/[0.02] py-12">
+          <div className="mx-auto mb-8 max-w-7xl px-6 text-center text-sm font-medium tracking-tight text-slate-500">
+            A ESCOLHA DOS FUTUROS ALUNOS DAS MELHORES UNIVERSIDADES
           </div>
+          <LogoCarousel logos={UNIVERSITY_LOGOS} />
+        </section>
 
-          {/* Mascot floater */}
-          <motion.div
-            className="lp-floating-mascot"
-            initial={{ opacity: 0, x: -40 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-          >
-            <Image
-              src="/wolf-mascot.png"
-              alt="Wolfie mascot"
-              width={90}
-              height={90}
-              className="lp-mascot-img"
-              unoptimized
-            />
-          </motion.div>
-        </motion.div>
+        <MetamorphosisScroll />
 
-        {/* Store buttons */}
-        <motion.div
-          className="lp-stores"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-        >
-          <a href="#" className="lp-store-btn" onClick={(e) => e.preventDefault()}>
-            <AppleIcon /> App Store
-          </a>
-          <a href="#" className="lp-store-btn" onClick={(e) => e.preventDefault()}>
-            <PlayStoreIcon /> Google Play
-          </a>
-        </motion.div>
+        <section className="relative z-30 w-full bg-[#020817] pb-32">
+          <div className="z-40 w-full bg-[#020817] px-4 py-16 text-center">
+            <h3 className="text-3xl font-bold tracking-tighter text-white drop-shadow-lg md:text-5xl">
+              O teu tempo. De volta a ti.
+            </h3>
+          </div>
+          <ZoomParallax images={PARALLAX_IMAGES} />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-40 h-64 bg-gradient-to-t from-[#020817] to-transparent" />
+        </section>
 
-        {/* Feature chips */}
-        <motion.div
-          className="lp-chips-row"
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-        >
-          <motion.div className="lp-glass-chip" variants={fadeUp}>
-            <div className="lp-chip-icon"><Clock size={24} /></div>
-            <div>
-              <div className="lp-chip-title">Tempo Otimizado</div>
-              <div className="lp-chip-sub">Ganha horas no teu dia.</div>
-            </div>
-          </motion.div>
+        <div className="relative z-40 border-t border-white/5 bg-[#020617]">
+          <CinematicFeatures />
+        </div>
+      </main>
 
-          <motion.div className="lp-glass-chip" variants={fadeUp}>
-            <div className="lp-chip-icon"><BrainCircuit size={24} /></div>
-            <div>
-              <div className="lp-chip-title">Tutor Passo a Passo</div>
-              <div className="lp-chip-sub">Acabou a frustração a Matemática.</div>
-            </div>
-          </motion.div>
-
-          <motion.div className="lp-glass-chip" variants={fadeUp}>
-            <div className="lp-chip-icon"><ShieldCheck size={24} /></div>
-            <div>
-              <div className="lp-chip-title">Base de Dados Nacional</div>
-              <div className="lp-chip-sub">100% alinhado com o currículo.</div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* ===== MARKETING COPY ===== */}
-      <motion.section
-        className="lp-marketing"
-        initial={{ opacity: 0, y: 60 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.7 }}
-      >
-        <h2>
-          Esquece as <span className="lp-highlight">mil fichas</span> que não saem no exame.
-        </h2>
-        <p>
-          Dás por ti a resolver exercícios cegamente, a bater com a cabeça na parede e a perder a tarde inteira?
-          O Wolfie deteta o teu ponto mais fraco. Dá-te apenas os problemas que precisas agora, e guia-te
-          incansavelmente pelo raciocínio como um explicador sentado a teu lado.
-          <br /><br />
-          <strong style={{ color: "#fff" }}>Estudas menos, absorves o dobro, sacas a nota.</strong>
-        </p>
-      </motion.section>
-
-      {/* ===== CTA ===== */}
-      <motion.section
-        className="lp-cta"
-        initial={{ opacity: 0, y: 60 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.7 }}
-      >
-        <h2>Professores &amp; Mentes Geniais</h2>
-        <p>
-          O motor está vivo, mas precisamos da tua expertise. Constrói módulos letais para a nossa
-          base de dados e treina o tutor perfeito.
-        </p>
-        <a href="#" className="lp-cta-btn" onClick={(e) => e.preventDefault()}>
-          Junta-te à Task Force <ArrowRight size={22} />
-        </a>
-      </motion.section>
-
-      <footer className="lp-footer">
-        <p>© {new Date().getFullYear()} Wolfie AI. A reescrever o ensino secundário em Portugal.</p>
-        <a href="/manager">Login Workspace</a>
-      </footer>
+      <ContributionCTA />
     </div>
   );
 }

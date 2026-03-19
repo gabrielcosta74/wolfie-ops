@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getStudioSession } from "@/lib/studio-auth";
+import { getStudioSession, isStudioRole } from "@/lib/studio-auth";
 import { StudioNav } from "./StudioNav";
 import "./studio.css";
 
 export const metadata: Metadata = {
-  title: "Wolfie Studio | Portal do Professor",
-  description: "Portal de revisão para professores validarem e melhorarem o banco de perguntas do Wolfie.",
+  title: "Wolfi Studio | Portal do Professor",
+  description: "Portal de revisão para professores validarem e melhorarem o banco de perguntas do Wolfi.",
 };
 
 export default async function StudioLayout({ children }: { children: React.ReactNode }) {
   const { user, role } = await getStudioSession();
-  const isTeacher = role === "teacher";
+  const hasAccess = isStudioRole(role);
 
   return (
     <div className="studio-portal">
@@ -19,7 +19,7 @@ export default async function StudioLayout({ children }: { children: React.React
         <div className="st-header-brand">
           <div className="st-logo">W</div>
           <div>
-            <div className="st-header-name">Wolfie Studio</div>
+            <div className="st-header-name">Wolfi Studio</div>
             <div className="st-header-sub">Revisão guiada para professores</div>
           </div>
         </div>
@@ -35,7 +35,7 @@ export default async function StudioLayout({ children }: { children: React.React
         )}
       </header>
 
-      {isTeacher ? (
+      {hasAccess ? (
         <div className="st-shell">
           <nav className="st-sidebar">
             <div className="st-sidebar-top">

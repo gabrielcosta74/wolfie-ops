@@ -2,10 +2,12 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatDateTime } from "@/lib/format";
 import { listWorkflows } from "@/lib/ops-data";
 import { Settings as SettingsIcon, ShieldAlert } from "lucide-react";
+import { requireManagerUser } from "@/lib/ops-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  await requireManagerUser();
   const workflows = await listWorkflows();
 
   const activeWorkflows = workflows.filter((w) => w.is_active);

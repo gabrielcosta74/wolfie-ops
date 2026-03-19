@@ -1,8 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireManagerApiUser } from "@/lib/ops-auth";
+import { rejectUntrustedOriginForRoute } from "@/lib/request-security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-export async function POST(request: Request, paramsGroup: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest, paramsGroup: { params: Promise<{ id: string }> }) {
   try {
+    const originError = rejectUntrustedOriginForRoute(request);
+    if (originError) return originError;
+
+    const actor = await requireManagerApiUser();
+    if (actor instanceof NextResponse) return actor;
+
     const { id } = await paramsGroup.params;
     const body = await request.json();
     const { status } = body;

@@ -8,7 +8,7 @@ export default function AcademyLayout({ children }: { children: React.ReactNode 
         <div className="ac-portal-brand">
           <div className="ac-portal-logo">W</div>
           <div>
-            <span className="ac-portal-name">Wolfie Academy</span>
+            <span className="ac-portal-name">Wolfi Academy</span>
             <span className="ac-portal-sub">Portal de Conteúdo</span>
           </div>
         </div>

@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireManagerUser } from "@/lib/ops-auth";
+import { requireTrustedOriginForAction } from "@/lib/request-security";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 function asText(value: FormDataEntryValue | null) {
@@ -49,6 +51,8 @@ function revalidatePricingPaths() {
 }
 
 export async function savePlanSetting(formData: FormData) {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
   const profileId = asText(formData.get("profile_id"));
   const planCode = asText(formData.get("plan_code"));
@@ -101,6 +105,8 @@ export async function savePlanSetting(formData: FormData) {
 }
 
 export async function saveFeatureSetting(formData: FormData) {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
   const profileId = asText(formData.get("profile_id"));
   const featureKey = asText(formData.get("feature_key"));
@@ -153,6 +159,8 @@ export async function saveFeatureSetting(formData: FormData) {
 }
 
 export async function saveProviderCostSetting(formData: FormData) {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
   const profileId = asText(formData.get("profile_id"));
   const modelKey = asText(formData.get("model_key"));
@@ -200,6 +208,8 @@ export async function saveProviderCostSetting(formData: FormData) {
 }
 
 export async function saveInfraCostSetting(formData: FormData) {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
   const profileId = asText(formData.get("profile_id"));
   const costKey = asText(formData.get("cost_key"));
@@ -245,6 +255,8 @@ export async function saveInfraCostSetting(formData: FormData) {
 }
 
 export async function saveStoreItem(formData: FormData) {
+  await requireManagerUser();
+  await requireTrustedOriginForAction();
   const supabase = getSupabaseAdmin();
   const profileId = asText(formData.get("profile_id"));
   const itemKey = asText(formData.get("item_key"));
@@ -391,7 +403,7 @@ export async function publishDraftPricing() {
       changeType: "publish_draft",
       beforeJson: { archivedProfileId: row.archived_profile_id ?? null },
       afterJson: { activeProfileId: row.active_profile_id, newDraftProfileId: row.draft_profile_id ?? null },
-      reason: "Draft publicado para active no Wolfie Ops.",
+      reason: "Draft publicado para active no Wolfi Ops.",
     });
   }
 
@@ -422,7 +434,7 @@ export async function rollbackPricingProfile(formData: FormData) {
       changeType: "rollback_to_archived",
       beforeJson: { previousActiveProfileId: row.previous_active_profile_id ?? null },
       afterJson: { restoredActiveProfileId: row.restored_active_profile_id, draftProfileId: row.draft_profile_id ?? null },
-      reason: "Rollback manual executado no Wolfie Ops.",
+      reason: "Rollback manual executado no Wolfi Ops.",
     });
   }
 

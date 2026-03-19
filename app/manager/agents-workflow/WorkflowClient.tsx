@@ -27,7 +27,7 @@ const V1_NODES = [
     matchKeys: ["coverage-profiler", "coverage_profiler"],
     title: "Coverage Profiler",
     role: "Automático",
-    desc: "Cruza a taxonomia do Wolfie com os currículos nacionais para detetar subcoberturas e lacunas de conteúdo.",
+    desc: "Cruza a taxonomia do Wolfi com os currículos nacionais para detetar subcoberturas e lacunas de conteúdo.",
     icon: <Target size={24} />,
     color: "#34d399",
     schedule: "Terça 08:00",
@@ -229,7 +229,7 @@ export default function WorkflowClient({ workflows, runs, findings, briefs, case
       <div className="wf-hero">
         <div className="wf-title-section">
           <h2><Network className="inline-icon" /> Control Room <span>V1</span></h2>
-          <p>Observability & Gestão da Orquestração Curricular do Wolfie Backend.</p>
+          <p>Observability & Gestão da Orquestração Curricular do Wolfi Backend.</p>
         </div>
         
         <div className="wf-kpi-grid">

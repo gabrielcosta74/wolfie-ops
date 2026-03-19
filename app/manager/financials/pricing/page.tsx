@@ -171,7 +171,7 @@ export default async function PricingPage() {
             Pricing & Limits
           </h1>
           <p style={{ margin: 0, color: "var(--muted)", maxWidth: 820, lineHeight: 1.6 }}>
-            Editor operacional do pricing do Wolfie. Tudo aqui trabalha sobre o perfil <strong>draft</strong>.
+            Editor operacional do pricing do Wolfi. Tudo aqui trabalha sobre o perfil <strong>draft</strong>.
             O perfil <strong>active</strong> serve de comparação e continua a ser a referência do produto em runtime.
           </p>
         </div>
@@ -289,9 +289,11 @@ export default async function PricingPage() {
           <span style={{ color: "var(--muted)" }}>{draft.profile.name}</span>
         </div>
         <div className="panel pad" style={{ display: "grid", gap: 8 }}>
-          <SmallLabel>Observed Revenue</SmallLabel>
-          <strong style={{ fontSize: "1.4rem" }}>{eur(draftMetrics.observed.monthlyRevenueEur)}</strong>
-          <span style={{ color: "var(--muted)" }}>{draftMetrics.observed.premiumUsers} premium</span>
+          <SmallLabel>Receita Líquida Plataforma</SmallLabel>
+          <strong style={{ fontSize: "1.4rem" }}>{eur(draftMetrics.observed.netSubscriptionRevenueEur)}</strong>
+          <span style={{ color: "var(--muted)" }}>
+            {draftMetrics.observed.premiumUsers} premium · bruto {eur(draftMetrics.observed.monthlyRevenueEur)}
+          </span>
         </div>
         <div className="panel pad" style={{ display: "grid", gap: 8 }}>
           <SmallLabel>Observed AI Cost</SmallLabel>

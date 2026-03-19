@@ -7,7 +7,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPublicPortal =
     pathname === "/" ||
+    pathname.startsWith("/landing") ||
     pathname.startsWith("/contribuir") ||
+    pathname.startsWith("/ops") ||
     pathname.startsWith("/studio");
 
   if (isPublicPortal) {
@@ -20,7 +22,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div className="ops-brand">
           <div className="brand-logo">W</div>
           <div className="brand-text">
-            <h1 className="ops-sidebar-title">Wolfie Ops</h1>
+            <h1 className="ops-sidebar-title">Wolfi Ops</h1>
             <p className="eyebrow">Monitorização e Cobertura</p>
           </div>
         </div>
@@ -30,7 +32,24 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="ops-main-wrapper">
         <header className="ops-topbar" style={{ justifyContent: "flex-end" }}>
           <div className="topbar-actions">
-            <div className="avatar-placeholder">Admin</div>
+            <form
+              action="/ops/logout?next=/ops/login"
+              method="POST"
+            >
+              <button
+                type="submit"
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.03)",
+                  color: "var(--text)",
+                  padding: "10px 14px",
+                  cursor: "pointer",
+                }}
+              >
+                Sair
+              </button>
+            </form>
           </div>
         </header>
 

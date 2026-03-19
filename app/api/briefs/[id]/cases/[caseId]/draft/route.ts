@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOpsEnv } from "@/lib/env";
+import { requireManagerApiUser } from "@/lib/ops-auth";
+import { rejectUntrustedOriginForRoute } from "@/lib/request-security";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +9,12 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string; caseId: string }> },
 ) {
+  const originError = rejectUntrustedOriginForRoute(request);
+  if (originError) return originError;
+
+  const actor = await requireManagerApiUser();
+  if (actor instanceof NextResponse) return actor;
+
   const env = getOpsEnv();
   const { id, caseId } = await context.params;
   const body = await request.json().catch(() => ({}));
