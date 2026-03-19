@@ -1,10 +1,12 @@
 import path from "node:path";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
+const isVercel = process.env.VERCEL === "1";
+const outputFileTracingRoot = isVercel ? process.cwd() : path.join(process.cwd(), "..");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  outputFileTracingRoot: path.join(process.cwd(), ".."),
+  outputFileTracingRoot,
   async headers() {
     return [
       {
