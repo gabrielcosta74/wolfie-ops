@@ -9,6 +9,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     pathname === "/" ||
     pathname.startsWith("/landing") ||
     pathname.startsWith("/contribuir") ||
+    pathname.startsWith("/auth") ||
     pathname.startsWith("/ops") ||
     pathname.startsWith("/studio");
 

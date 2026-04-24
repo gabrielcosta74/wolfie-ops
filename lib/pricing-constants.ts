@@ -10,7 +10,7 @@
 // ---------------------------------------------------------------------------
 // Premium subscription price
 // ---------------------------------------------------------------------------
-export const PREMIUM_PRICE_EUR = 8.99; // per month
+export const PREMIUM_PRICE_EUR = 12.99; // per month
 
 // ---------------------------------------------------------------------------
 // Exact Model Pricing (per 1M tokens, EUR)
@@ -77,9 +77,9 @@ export const COST_PER_CALL_EUR: Record<string, { cost: number; model: string; de
     description: "Follow-up de dúvida",
   },
   chat_tutor_message: {
-    cost: 0.0015,   // ~1000 in + 500 out, varies by plan
+    cost: 0.00042,  // free: ~€0.0002 (flash-lite 700in+450out) · premium: ~€0.00065 (flash 1500in+800out)
     model: "gemini-2.5-flash-lite",
-    description: "Mensagem ao Chat Tutor",
+    description: "Mensagem ao Chat Tutor (blended free/premium)",
   },
   grade_exam: {
     cost: 0.0040,   // ~1500 in (+ image) + 800 out on flash
