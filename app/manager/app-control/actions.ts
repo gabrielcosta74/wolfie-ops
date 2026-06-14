@@ -140,20 +140,26 @@ export async function saveBuildRule(formData: FormData) {
   const supabase = getSupabaseAdmin();
   const platform = asText(formData.get("platform"));
   const buildNumber = asNumber(formData.get("build_number"));
+  const appVersion = asText(formData.get("app_version"));
   const status = asText(formData.get("status")) ?? "blocked";
 
-  if (!platform || !buildNumber) return;
+  if (!platform) return;
+  const hasBuild = buildNumber !== null;
+  const hasVersion = appVersion !== null;
+  if (hasBuild === hasVersion) return;
 
-  const { data: before } = await supabase
+  const targetQuery = supabase
     .from("app_build_rules")
     .select("*")
-    .eq("platform", platform)
-    .eq("build_number", buildNumber)
-    .maybeSingle();
+    .eq("platform", platform);
+  const { data: before } = hasBuild
+    ? await targetQuery.eq("build_number", buildNumber!).is("app_version", null).maybeSingle()
+    : await targetQuery.eq("app_version", appVersion!).is("build_number", null).maybeSingle();
 
   const patch = {
     platform,
-    build_number: buildNumber,
+    build_number: hasBuild ? buildNumber : null,
+    app_version: hasVersion ? appVersion : null,
     status,
     message: "Versão descontinuada, atualiza",
     notes: asText(formData.get("notes")),
@@ -162,7 +168,9 @@ export async function saveBuildRule(formData: FormData) {
 
   const { data: after, error } = await supabase
     .from("app_build_rules")
-    .upsert(patch, { onConflict: "platform,build_number" })
+    .upsert(patch, {
+      onConflict: hasBuild ? "platform,build_number" : "platform,app_version",
+    })
     .select("*")
     .single();
 
@@ -175,7 +183,7 @@ export async function saveBuildRule(formData: FormData) {
     actorUserId: actor.id,
     action: "upsert_build_rule",
     targetType: "app_build_rules",
-    targetId: `${platform}:${buildNumber}`,
+    targetId: `${platform}:${hasBuild ? `build#${buildNumber}` : `v${appVersion}`}`,
     beforeValue: before ?? {},
     afterValue: after ?? patch,
   });

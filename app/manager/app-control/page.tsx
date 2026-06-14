@@ -161,30 +161,34 @@ export default async function AppControlPage() {
 
         <section className="panel pad">
           <h2 style={sectionTitleStyle}>Builds</h2>
-          <form action={saveBuildRule} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
+          <form action={saveBuildRule} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 8 }}>
             <select name="platform" defaultValue="android" style={inputStyle}>
               <option value="android">Android</option>
               <option value="ios">iOS</option>
             </select>
-            <input name="build_number" type="number" min={1} placeholder="versionCode/buildNumber" style={inputStyle} />
             <select name="status" defaultValue="blocked" style={inputStyle}>
               <option value="blocked">blocked</option>
               <option value="force_update">force_update</option>
               <option value="allowed">allowed</option>
             </select>
-            <input name="notes" placeholder="Notas internas" style={inputStyle} />
+            <input name="build_number" type="number" min={1} placeholder="Version code / buildNumber (ex: 12)" style={inputStyle} />
+            <input name="app_version" type="text" inputMode="text" placeholder="App version (ex: 1.0.1)" pattern="^\d+\.\d+(\.\d+)?(-[\w.]+)?$" title="Formato semver: 1.0.1" style={inputStyle} />
+            <input name="notes" placeholder="Notas internas" style={{ ...inputStyle, gridColumn: "1 / -1" }} />
             <button className="button" type="submit" style={{ gridColumn: "1 / -1" }}>Guardar regra de build</button>
           </form>
+          <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 18 }}>
+            Preenche <strong>apenas um</strong> dos dois: <em>Version code</em> (integer que o EAS atribui — sobe a cada build) ou <em>App version</em> (semver de utilizador, ex. <code>1.0.1</code>).
+          </p>
           <div className="table-wrap">
             <table className="ops-table">
               <thead>
-                <tr><th>Plataforma</th><th>Build</th><th>Status</th><th>Notas</th></tr>
+                <tr><th>Plataforma</th><th>Alvo</th><th>Status</th><th>Notas</th></tr>
               </thead>
               <tbody>
                 {builds.map((build) => (
                   <tr key={build.id}>
                     <td>{build.platform}</td>
-                    <td>{build.build_number}</td>
+                    <td>{build.app_version ? `v${build.app_version}` : `build #${build.build_number}`}</td>
                     <td><Badge tone={build.status === "allowed" ? "success" : "danger"}>{build.status}</Badge></td>
                     <td>{build.notes ?? "-"}</td>
                   </tr>
