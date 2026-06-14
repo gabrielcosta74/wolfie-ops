@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { 
   Inbox, History, Calendar, Settings, Database, LayoutDashboard, 
   DollarSign, Users, BarChart3, Bot, FileText, Cpu, BookOpenCheck, 
-  CheckCircle, ChevronDown, ChevronRight 
+  CheckCircle, ChevronDown, ChevronRight, Shield
 } from "lucide-react";
 
 type NavItem = { href: string; label: string; badge?: number; badgeColor?: string; icon: React.ReactNode; group: string };
@@ -22,6 +22,7 @@ const items: NavItem[] = [
   { group: "Wolfi Manager", href: "/manager/exams", label: "Exames", icon: <FileText size={16} /> },
   { group: "Wolfi Manager", href: "/manager/approvals", label: "Aprovações", icon: <CheckCircle size={16} /> },
   { group: "Wolfi Manager", href: "/manager/users", label: "Utilizadores", icon: <Users size={16} /> },
+  { group: "Wolfi Manager", href: "/manager/app-control", label: "App Control", icon: <Shield size={16} /> },
   { group: "Wolfi Manager", href: "/manager/teachers", label: "Professores", icon: <Users size={16} /> },
   { group: "Wolfi Manager", href: "/manager/analytics", label: "Analytics", icon: <BarChart3 size={16} /> },
   { group: "Financeiro", href: "/manager/financials", label: "P&L Overview", icon: <DollarSign size={16} /> },
